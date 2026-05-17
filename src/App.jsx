@@ -759,7 +759,7 @@ function QuizSection({ questions, color }) {
                       cursor: isSubmitted ? "default" : "pointer",
                       background: bg,
                       color: textColor,
-                      fontSize: 12,
+                      fontSize: 14,
                       lineHeight: 1.5,
                       display: "flex",
                       alignItems: "flex-start",
@@ -794,7 +794,7 @@ function QuizSection({ questions, color }) {
                     border: "none",
                     borderRadius: 6,
                     color: selected !== undefined ? "#000" : "#475569",
-                    fontSize: 12,
+                    fontSize: 14,
                     fontWeight: 700,
                     cursor: selected !== undefined ? "pointer" : "not-allowed",
                     transition: "all 0.2s"
@@ -1019,7 +1019,7 @@ export default function UiPathCourse() {
                 {isOpen && (
                   <div style={{ padding: "14px 16px" }}>
                     <div
-                      style={{ fontSize: 12, lineHeight: 1.8, color: "#94A3B8", marginBottom: 12 }}
+                      style={{ fontSize: 14, lineHeight: 1.8, color: "#94A3B8", marginBottom: 12 }}
                       dangerouslySetInnerHTML={{ __html: section.content }}
                     />
                     {section.code && (
