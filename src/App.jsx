@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 const topics = [
   {
@@ -839,6 +839,22 @@ export default function UiPathCourse() {
   const [active, setActive] = useState("else-if");
   const [openSections, setOpenSections] = useState({});
   const [activeTab, setActiveTab] = useState("content");
+  const [sidebarOpen, setSidebarOpen] = useState(window.innerWidth >= 768);
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+
+  useEffect(() => {
+    const handleResize = () => {
+      const mobile = window.innerWidth < 768;
+      setIsMobile(mobile);
+      if (mobile) {
+        setSidebarOpen(false);
+      } else {
+        setSidebarOpen(true);
+      }
+    };
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
 
   const topic = topics.find(t => t.id === active);
 
@@ -846,6 +862,7 @@ export default function UiPathCourse() {
     setActive(id);
     setOpenSections({});
     setActiveTab("content");
+    if (isMobile) setSidebarOpen(false);
   };
 
   const toggleSection = (key) => {
@@ -865,7 +882,7 @@ export default function UiPathCourse() {
       <div style={{
         background: "linear-gradient(135deg, #0F172A, #1E293B)",
         borderBottom: "1px solid #1E3A5F",
-        padding: "14px 24px",
+        padding: isMobile ? "10px 14px" : "14px 24px",
         display: "flex",
         alignItems: "center",
         gap: 14,
@@ -879,7 +896,7 @@ export default function UiPathCourse() {
           fontSize: 18, fontWeight: 900, color: "#fff",
           boxShadow: "0 0 18px rgba(0,198,255,0.35)"
         }}>U</div>
-        <div>
+        <div style={{ flex: 1 }}>
           <div style={{ fontSize: 15, fontWeight: 700, color: "#fff", letterSpacing: 0.5 }}>
             UiPath Studio — Certification Course
           </div>
@@ -887,49 +904,97 @@ export default function UiPathCourse() {
             Deep Dive + Exam Trap Questions
           </div>
         </div>
+        {isMobile && (
+          <button
+            onClick={() => setSidebarOpen(p => !p)}
+            aria-label={sidebarOpen ? "Close sidebar" : "Open sidebar"}
+            aria-expanded={sidebarOpen}
+            style={{
+              background: "none",
+              border: "1px solid #334155",
+              borderRadius: 6,
+              color: "#94A3B8",
+              cursor: "pointer",
+              fontSize: 18,
+              padding: "4px 8px",
+              lineHeight: 1,
+              flexShrink: 0,
+            }}
+          >
+            {sidebarOpen ? "✕" : "☰"}
+          </button>
+        )}
       </div>
 
       <div style={{ display: "flex", flex: 1, overflow: "hidden" }}>
         {/* Sidebar */}
         <div style={{
-          width: 200,
+          width: sidebarOpen ? 200 : 0,
           background: "#0D1117",
-          borderRight: "1px solid #1E293B",
-          overflowY: "auto",
-          flexShrink: 0
+          overflowY: sidebarOpen ? "auto" : "hidden",
+          overflowX: "hidden",
+          flexShrink: 0,
+          transition: "width 0.25s ease",
         }}>
-          {topics.map(t => (
-            <button
-              key={t.id}
-              onClick={() => handleTopicChange(t.id)}
-              style={{
-                width: "100%",
-                textAlign: "left",
-                padding: "11px 13px",
-                background: active === t.id ? `linear-gradient(90deg, ${t.color}15, transparent)` : "transparent",
-                border: "none",
-                borderLeft: active === t.id ? `3px solid ${t.color}` : "3px solid transparent",
-                cursor: "pointer",
-                display: "flex",
-                alignItems: "center",
-                gap: 9
-              }}
-            >
-              <span style={{ fontSize: 15 }}>{t.icon}</span>
-              <div>
-                <div style={{ fontSize: 11, fontWeight: 700, color: active === t.id ? t.color : "#94A3B8", lineHeight: 1.3 }}>
-                  {t.title}
+          <div style={{ width: 200 }}>
+            {topics.map(t => (
+              <button
+                key={t.id}
+                onClick={() => handleTopicChange(t.id)}
+                style={{
+                  width: "100%",
+                  textAlign: "left",
+                  padding: "11px 13px",
+                  background: active === t.id ? `linear-gradient(90deg, ${t.color}15, transparent)` : "transparent",
+                  border: "none",
+                  borderLeft: active === t.id ? `3px solid ${t.color}` : "3px solid transparent",
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 9
+                }}
+              >
+                <span style={{ fontSize: 15 }}>{t.icon}</span>
+                <div>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: active === t.id ? t.color : "#94A3B8", lineHeight: 1.3 }}>
+                    {t.title}
+                  </div>
+                  <div style={{ fontSize: 9, color: "#334155", marginTop: 1 }}>
+                    {t.quiz.length} questions
+                  </div>
                 </div>
-                <div style={{ fontSize: 9, color: "#334155", marginTop: 1 }}>
-                  {t.quiz.length} questions
-                </div>
-              </div>
-            </button>
-          ))}
+              </button>
+            ))}
+          </div>
         </div>
 
+        {/* Desktop chevron toggle */}
+        {!isMobile && (
+          <button
+            onClick={() => setSidebarOpen(p => !p)}
+            aria-label={sidebarOpen ? "Collapse sidebar" : "Expand sidebar"}
+            aria-expanded={sidebarOpen}
+            style={{
+              width: 18,
+              background: "#0D1117",
+              border: "none",
+              borderRight: "1px solid #1E293B",
+              cursor: "pointer",
+              color: "#94A3B8",
+              fontSize: 14,
+              flexShrink: 0,
+              padding: "8px 0 0 0",
+              display: "flex",
+              alignItems: "flex-start",
+              justifyContent: "center",
+            }}
+          >
+            {sidebarOpen ? "‹" : "›"}
+          </button>
+        )}
+
         {/* Main content */}
-        <div style={{ flex: 1, overflowY: "auto", padding: "18px 24px" }}>
+        <div style={{ flex: 1, overflowY: "auto", padding: isMobile ? "12px 14px" : "18px 24px" }}>
           {/* Topic header */}
           <div style={{
             background: `linear-gradient(135deg, ${topic.color}15, #0F172A 60%)`,
