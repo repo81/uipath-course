@@ -84,89 +84,104 @@ Switch (statusCode)
     ]
   },
   {
-    id: "sedative",
-    icon: "⏱",
-    title: "Delay (Sedative) Activities",
-    subtitle: "Pausing Workflow Execution",
+    id: "semantic",
+    icon: "✦",
+    title: "Semantic Activities",
+    subtitle: "AI-Powered UI Targeting & Form Automation",
     color: "#A78BFA",
     sections: [
       {
-        heading: "What Are Sedative Activities?",
-        content: `Sedative activities is an informal term for activities that <strong>pause or slow down</strong> workflow execution. The primary one is the <strong>Delay</strong> activity.<br/><br/>
-<strong>Delay Activity:</strong>
+        heading: "What Are Semantic Activities?",
+        content: `<strong>Semantic Activities</strong> is a category of AI-powered UI automation activities in <strong>UiPath.UIAutomation.Activities</strong> that identify and interact with UI elements by <strong>functional meaning</strong> rather than rigid attribute matching.<br/><br/>
+There are two related concepts under this term:<br/>
 <ul>
-  <li>Package: UiPath.System.Activities</li>
-  <li>Property: Duration — accepts a TimeSpan value</li>
-  <li>Scope: Works in any container (Sequence, Flowchart, While loop)</li>
-  <li>Use case: Waiting for a page to load, throttling loops, waiting for systems to respond</li>
-</ul>`,
-        code: `// Setting Delay duration:
+  <li><strong>Semantic Action Activities</strong> — a set of dedicated activities: Extract Form Data, Fill Form, Set Value, and Close Popup</li>
+  <li><strong>Semantic Selectors</strong> — an AI targeting method inside the Unified Target framework (Modern Activities)</li>
+</ul>
+<strong>Key fact:</strong> Semantic action activities consume <strong>AI units</strong> per request. Extract Form Data, Fill Form, and Set Value each consume one AI unit. Close Popup only consumes an AI unit when <strong>AI-Enhanced mode</strong> is explicitly enabled — in standard mode it uses no AI units.`,
+        code: `// Internal components used by Semantic Activities:
 
-// Option 1 - TimeSpan literal
-Duration = 00:00:05        <- 5 seconds
+DOM Extractor     <- reads the full page DOM structure
+Semantic Matching <- maps elements to their functional meaning
+Semantic Execution <- performs the interaction on the matched element
 
-// Option 2 - TimeSpan expression in VB.Net
-Duration = TimeSpan.FromSeconds(5)
-Duration = TimeSpan.FromMilliseconds(500)
-Duration = TimeSpan.FromMinutes(1)
-
-// Option 3 - Variable
-Dim myDelay As TimeSpan = TimeSpan.FromSeconds(n)
-Duration = myDelay`
+// AI unit consumption per call:
+Extract Form Data  -> 1 AI unit
+Fill Form          -> 1 AI unit
+Set Value          -> 1 AI unit
+Close Popup        -> 0 AI units (standard mode)
+Close Popup        -> 1 AI unit  (AI-Enhanced mode only)`
       },
       {
-        heading: "Other Wait Activities",
-        content: `<ul>
-  <li><strong>Wait Element Vanish</strong> — Pauses until a UI element disappears</li>
-  <li><strong>Wait Image Vanish</strong> — Pauses until an image disappears from screen</li>
-  <li><strong>Element Exists</strong> — Checks for presence (use in a Do-While loop as a polling wait)</li>
-  <li><strong>Find Element</strong> — Waits for element to appear (WaitForReady property)</li>
-  <li><strong>Pick</strong> activity — Waits for one of multiple triggers (event-driven branching)</li>
+        heading: "Semantic Selectors vs Classic Selectors",
+        content: `<strong>Classic Selectors</strong> (legacy activities) use XML attribute matching — tag names, ids, class names, aaname. They break when the application's UI structure changes.<br/><br/>
+<strong>Semantic Selectors</strong> (Modern Activities / Unified Target) use an AI-generated functional description of the element — for example, "the username field on the login screen." They match by <em>intent</em>, not structure, making automations resilient to UI refactors.<br/><br/>
+<strong>Important defaults:</strong>
+<ul>
+  <li>Semantic Selectors are <strong>disabled by default</strong></li>
+  <li>They activate only as a fallback <strong>after Computer Vision fails</strong></li>
+  <li>They can be promoted to primary method by disabling higher-priority methods</li>
 </ul>
-<strong>Best Practice:</strong> Always prefer smart waits over hardcoded Delay — hardcoded delays are fragile and slow.`,
-        code: `// Polling pattern using Do While + Element Exists:
-Do
-  Delay: 00:00:01
-  elementFound = Element Exists (selector)
-While (NOT elementFound AND retryCount < 10)`
+<strong>Unified Target fallback order (highest to lowest priority):</strong>`,
+        code: `// Unified Target targeting method priority:
+
+1. Strict Selector   <- exact XML attribute match (fastest, most brittle)
+2. Fuzzy Selector    <- partial attribute match (tolerates minor changes)
+3. Computer Vision   <- AI image-based detection
+4. Semantic          <- AI functional description (disabled by default, last resort)
+5. Image             <- pixel-level screenshot match
+6. Native Text       <- text content targeting`
+      },
+      {
+        heading: "Core Semantic Activities Reference",
+        content: `<strong>Extract Form Data</strong> — Extracts structured data from complex forms using AI to understand field labels and values.<br/><br/>
+<strong>Fill Form</strong> — Populates an entire form from a data source; AI determines which field maps to which value based on semantic understanding of field labels.<br/><br/>
+<strong>Set Value</strong> — Sets the value of a single semantically-identified field.<br/><br/>
+<strong>Close Popup</strong> — Closes popup dialogs. In standard mode it uses a rule-based approach (no AI units). Enabling <strong>AI-Enhanced mode</strong> uses AI to identify the correct dismiss action on complex or unusual popups.<br/><br/>
+<strong>When to use Semantic vs Traditional:</strong>
+<ul>
+  <li>Use Semantic when selectors are <strong>unstable</strong> due to frequent UI changes</li>
+  <li>Use Semantic for <strong>dynamic forms</strong> where field structure is unpredictable</li>
+  <li>Prefer traditional selectors when <strong>performance and AI unit cost</strong> are a concern</li>
+</ul>`
       }
     ],
     quiz: [
       {
-        q: "What data type does the Delay activity's Duration property accept?",
+        q: "Which Semantic Activity does NOT consume AI units by default?",
         options: [
-          "Integer (milliseconds)",
-          "String in format 'HH:MM:SS'",
-          "TimeSpan",
-          "Double (seconds)"
+          "Extract Form Data",
+          "Fill Form",
+          "Set Value",
+          "Close Popup"
         ],
-        answer: 2,
-        trap: "Options A and D are very common traps. Beginners try typing a plain number like 5000 or 5.0 and get a type error. The Duration field requires a TimeSpan — either the literal 00:00:05 or TimeSpan.FromSeconds(5).",
-        explanation: "Duration is strictly TimeSpan type. Use TimeSpan.FromSeconds(n), TimeSpan.FromMilliseconds(n), or the literal HH:MM:SS format in the property field."
+        answer: 3,
+        trap: "Close Popup is the trap. It sounds equally 'AI-powered' as the others, but in standard mode it uses a rule-based popup heuristic with zero AI unit cost. It only consumes one AI unit when AI-Enhanced mode is explicitly toggled on. The other three always consume one AI unit per request.",
+        explanation: "Extract Form Data, Fill Form, and Set Value each consume one AI unit every time they run. Close Popup is the exception — AI unit consumption is gated behind the AI-Enhanced mode toggle, which is off by default."
       },
       {
-        q: "Which is the BEST practice when waiting for a web page to fully load before interacting?",
+        q: "Where does the Semantic Selector sit in the Unified Target fallback chain?",
         options: [
-          "Add a Delay of 10 seconds after navigation",
-          "Use Find Element or Wait Element Vanish targeting a loading indicator",
-          "Use Thread.Sleep(10000) in an Invoke Code activity",
-          "Set a global Delay Speed in Project Settings"
+          "It runs first as the primary targeting method",
+          "It is disabled by default and activates only after Computer Vision fails",
+          "It is only available in Classic Activities, not Modern",
+          "It replaces the Fuzzy Selector entirely"
         ],
         answer: 1,
-        trap: "Option A is fragile — too short on slow networks, wasteful on fast ones. Option C uses Thread.Sleep which blocks the entire thread — a serious anti-pattern in UiPath. Option D does not exist as described.",
-        explanation: "Smart waits dynamically wait for UI conditions rather than fixed time assumptions, making automations more robust, faster, and easier to maintain."
+        trap: "Option A is the main trap — 'Semantic' sounds authoritative and intelligent, so it feels like it should run first. But Semantic Selectors are actually disabled by default and sit near the bottom of the priority order, only activating as a last resort after Computer Vision has already failed.",
+        explanation: "Unified Target priority: Strict → Fuzzy → Computer Vision → Semantic → Image → Native Text. Semantic can be promoted to primary by disabling methods above it, but out of the box it is the lowest-priority active fallback."
       },
       {
-        q: "The Pick activity is used when:",
+        q: "What is the key distinction between Classic Selectors and Semantic Selectors?",
         options: [
-          "You want to delay execution by a random time interval",
-          "You need to wait for ONE of multiple possible UI events, executing whichever fires first",
-          "You want to select a random item from a collection",
-          "You need to pause until all parallel branches complete"
+          "Classic selectors use AI descriptions; Semantic selectors use XML attributes",
+          "Classic selectors match by XML attributes; Semantic selectors match by AI functional description",
+          "Semantic selectors execute faster than Classic selectors",
+          "Semantic selectors require no design-time configuration"
         ],
         answer: 1,
-        trap: "Option C is a name trap — Pick sounds like selecting from a list but it is entirely about EVENT-DRIVEN branching. Option D describes Parallel activity join behavior. Option A has nothing to do with Pick.",
-        explanation: "Pick waits for whichever trigger fires first (e.g., a button click OR a timeout) and executes that branch. It is UiPath's event-driven wait mechanism."
+        trap: "Option C ('Semantic is faster') is a plausible-sounding trap — AI feels modern and quick — but Semantic selectors are actually slower: they only run after multiple other methods have failed. Option D is also wrong; Semantic selectors require a stored functional description captured at design time.",
+        explanation: "Classic selectors match rigid XML attributes (aaname, class, id) which break when UI structure changes. Semantic selectors match by functional meaning — e.g., 'the Submit button on the checkout form' — making them resilient to UI refactors even when element attributes change entirely."
       }
     ]
   },

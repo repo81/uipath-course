@@ -21,7 +21,7 @@ This is a single-page React 19 + Vite 8 app — a UiPath Studio certification st
 
 - `topics` — large array literal at the top of the file. Each entry has `id`, `icon`, `title`, `subtitle`, `color` (hex accent color), `sections[]` (study content with optional `code` string), and `quiz[]` (questions with `options`, `answer` index, `trap`, and `explanation`).
 - `QuizSection` — stateful component that renders one topic's quiz questions. Tracks `answers` and `submitted` state per question index. Shows trap/explanation feedback after submission.
-- `UiPathCourse` (default export) — root component. Manages `active` topic, `openSections` (collapsible accordion state keyed by `"${topicId}-${sectionIndex}"`), and `activeTab` (`"content"` | `"quiz"`). Switching topics resets both openSections and activeTab.
+- `UiPathCourse` (default export) — root component. Manages `active` topic, `openSections` (collapsible accordion state keyed by `"${topicId}-${sectionIndex}"`), `activeTab` (`"content"` | `"quiz"`), `sidebarOpen` (boolean), and `isMobile` (boolean, breakpoint 768px). A `useEffect` syncs `isMobile`/`sidebarOpen` on window resize. Switching topics resets openSections and activeTab; on mobile it also auto-closes the sidebar.
 
 **Styling:** 100% inline `style` props — no CSS classes, no Tailwind, no CSS-in-JS library. The color theme is dark navy (`#0A0E1A` background) with per-topic accent colors. Section content (`section.content`) is rendered via `dangerouslySetInnerHTML` and contains HTML markup (bold, ul/li tags).
 
