@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 
 const topics = [
   {
@@ -706,7 +706,7 @@ function QuizSection({ questions, color }) {
           <div style={{
             fontSize: 11, fontWeight: 700,
             color: totalCorrect === totalSubmitted ? "#34D399" : totalCorrect >= totalSubmitted / 2 ? "#FBBF24" : "#F87171",
-            background: "#0A0E1A",
+            background: "var(--bg-root)",
             border: `1px solid ${color}30`,
             borderRadius: 20,
             padding: "3px 12px"
@@ -724,25 +724,25 @@ function QuizSection({ questions, color }) {
         return (
           <div key={qi} style={{
             marginBottom: 16,
-            border: `1px solid ${isSubmitted ? (isCorrect ? "#34D39940" : "#F8717140") : "#1E293B"}`,
+            border: `1px solid ${isSubmitted ? (isCorrect ? "#34D39940" : "#F8717140") : "var(--border-primary)"}`,
             borderRadius: 10,
             overflow: "hidden",
-            background: "#0A0E1A"
+            background: "var(--bg-root)"
           }}>
-            <div style={{ padding: "12px 16px", borderBottom: "1px solid #1E293B" }}>
-              <div style={{ fontSize: 10, color: "#475569", marginBottom: 5, letterSpacing: 1 }}>
+            <div style={{ padding: "12px 16px", borderBottom: "1px solid var(--border-primary)" }}>
+              <div style={{ fontSize: 10, color: "var(--text-muted)", marginBottom: 5, letterSpacing: 1 }}>
                 QUESTION {qi + 1} OF {questions.length}
               </div>
-              <div style={{ fontSize: 13, color: "#CBD5E1", lineHeight: 1.6, fontWeight: 600 }}>
+              <div style={{ fontSize: 13, color: "var(--text-primary)", lineHeight: 1.6, fontWeight: 600 }}>
                 {q.q}
               </div>
             </div>
 
             <div style={{ padding: "12px 14px" }}>
               {q.options.map((opt, oi) => {
-                let bg = "#060A12";
-                let borderColor = "#1E293B";
-                let textColor = "#94A3B8";
+                let bg = "var(--bg-option)";
+                let borderColor = "var(--border-primary)";
+                let textColor = "var(--text-secondary)";
 
                 if (isSubmitted) {
                   if (oi === q.answer) {
@@ -805,10 +805,10 @@ function QuizSection({ questions, color }) {
                   style={{
                     marginTop: 8,
                     padding: "8px 22px",
-                    background: selected !== undefined ? color : "#1E293B",
+                    background: selected !== undefined ? color : "var(--border-primary)",
                     border: "none",
                     borderRadius: 6,
-                    color: selected !== undefined ? "#000" : "#475569",
+                    color: selected !== undefined ? "#000" : "var(--text-muted)",
                     fontSize: 16,
                     fontWeight: 700,
                     cursor: selected !== undefined ? "pointer" : "not-allowed",
@@ -837,8 +837,8 @@ function QuizSection({ questions, color }) {
                   <div style={{ fontSize: 11, color: "#FBBF24", marginBottom: 8, lineHeight: 1.7 }}>
                     <strong style={{ color: "#FCD34D" }}>TRAP: </strong>{q.trap}
                   </div>
-                  <div style={{ fontSize: 11, color: "#94A3B8", lineHeight: 1.7 }}>
-                    <strong style={{ color: "#CBD5E1" }}>Why: </strong>{q.explanation}
+                  <div style={{ fontSize: 11, color: "var(--text-secondary)", lineHeight: 1.7 }}>
+                    <strong style={{ color: "var(--text-primary)" }}>Why: </strong>{q.explanation}
                   </div>
                 </div>
               )}
@@ -851,6 +851,24 @@ function QuizSection({ questions, color }) {
 }
 
 export default function UiPathCourse() {
+  const rootRef = useRef(null);
+  const [isDark, setIsDark] = useState(() => {
+    const saved = localStorage.getItem("uipath-theme");
+    if (saved) return saved === "dark";
+    return !window.matchMedia("(prefers-color-scheme: light)").matches;
+  });
+
+  const toggleTheme = () => setIsDark(prev => !prev);
+
+  useEffect(() => {
+    if (rootRef.current) {
+      isDark
+        ? rootRef.current.removeAttribute("data-theme")
+        : rootRef.current.setAttribute("data-theme", "light");
+    }
+    localStorage.setItem("uipath-theme", isDark ? "dark" : "light");
+  }, [isDark]);
+
   const [active, setActive] = useState("else-if");
   const [openSections, setOpenSections] = useState({});
   const [activeTab, setActiveTab] = useState("content");
@@ -885,18 +903,18 @@ export default function UiPathCourse() {
   };
 
   return (
-    <div style={{
+    <div ref={rootRef} style={{
       minHeight: "100vh",
-      background: "#0A0E1A",
+      background: "var(--bg-root)",
       fontFamily: "'Courier New', Consolas, monospace",
-      color: "#E2E8F0",
+      color: "var(--text-primary)",
       display: "flex",
       flexDirection: "column"
     }}>
       {/* Header */}
       <div style={{
-        background: "linear-gradient(135deg, #0F172A, #1E293B)",
-        borderBottom: "1px solid #1E3A5F",
+        background: "linear-gradient(135deg, var(--bg-section-header), var(--border-primary))",
+        borderBottom: "1px solid var(--border-header)",
         padding: isMobile ? "10px 14px" : "14px 24px",
         display: "flex",
         alignItems: "center",
@@ -915,9 +933,38 @@ export default function UiPathCourse() {
           <div style={{ fontSize: 15, fontWeight: 700, color: "#fff", letterSpacing: 0.5 }}>
             UiPath Studio — Certification Course
           </div>
-          <div style={{ fontSize: 10, color: "#475569", letterSpacing: 2, textTransform: "uppercase" }}>
+          <div style={{ fontSize: 10, color: "var(--text-muted)", letterSpacing: 2, textTransform: "uppercase" }}>
             Deep Dive + Exam Trap Questions
           </div>
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
+          <span style={{ fontSize: 14 }}>🌙</span>
+          <div
+            onClick={toggleTheme}
+            role="switch"
+            aria-checked={!isDark}
+            aria-label="Toggle light mode"
+            style={{
+              width: 40, height: 22,
+              background: isDark ? "#1E293B" : "#0072FF",
+              border: `1px solid ${isDark ? "#334155" : "#0060D0"}`,
+              borderRadius: 11,
+              position: "relative",
+              cursor: "pointer",
+              flexShrink: 0
+            }}
+          >
+            <div style={{
+              width: 16, height: 16,
+              background: isDark ? "#60A5FA" : "#FFFFFF",
+              borderRadius: "50%",
+              position: "absolute",
+              top: 2,
+              left: isDark ? 2 : 22,
+              transition: "left 0.2s ease, background-color 0.2s ease"
+            }} />
+          </div>
+          <span style={{ fontSize: 14 }}>☀️</span>
         </div>
         {isMobile && (
           <button
@@ -926,9 +973,9 @@ export default function UiPathCourse() {
             aria-expanded={sidebarOpen}
             style={{
               background: "none",
-              border: "1px solid #334155",
+              border: "1px solid var(--text-faint)",
               borderRadius: 6,
-              color: "#94A3B8",
+              color: "var(--text-secondary)",
               cursor: "pointer",
               fontSize: 18,
               padding: "4px 8px",
@@ -945,7 +992,7 @@ export default function UiPathCourse() {
         {/* Sidebar */}
         <div style={{
           width: sidebarOpen ? 200 : 0,
-          background: "#0D1117",
+          background: "var(--bg-sidebar)",
           overflowY: sidebarOpen ? "auto" : "hidden",
           overflowX: "hidden",
           flexShrink: 0,
@@ -971,10 +1018,10 @@ export default function UiPathCourse() {
               >
                 <span style={{ fontSize: 15 }}>{t.icon}</span>
                 <div>
-                  <div style={{ fontSize: 11, fontWeight: 700, color: active === t.id ? t.color : "#94A3B8", lineHeight: 1.3 }}>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: active === t.id ? t.color : "var(--text-secondary)", lineHeight: 1.3 }}>
                     {t.title}
                   </div>
-                  <div style={{ fontSize: 9, color: "#334155", marginTop: 1 }}>
+                  <div style={{ fontSize: 9, color: "var(--text-faint)", marginTop: 1 }}>
                     {t.quiz.length} questions
                   </div>
                 </div>
@@ -991,11 +1038,11 @@ export default function UiPathCourse() {
             aria-expanded={sidebarOpen}
             style={{
               width: 18,
-              background: "#0D1117",
+              background: "var(--bg-sidebar)",
               border: "none",
-              borderRight: "1px solid #1E293B",
+              borderRight: "1px solid var(--border-primary)",
               cursor: "pointer",
-              color: "#94A3B8",
+              color: "var(--text-secondary)",
               fontSize: 14,
               flexShrink: 0,
               padding: "8px 0 0 0",
@@ -1012,7 +1059,7 @@ export default function UiPathCourse() {
         <div style={{ flex: 1, overflowY: "auto", padding: isMobile ? "12px 14px" : "18px 24px" }}>
           {/* Topic header */}
           <div style={{
-            background: `linear-gradient(135deg, ${topic.color}15, #0F172A 60%)`,
+            background: `linear-gradient(135deg, ${topic.color}15, var(--bg-section-header) 60%)`,
             border: `1px solid ${topic.color}35`,
             borderRadius: 11,
             padding: "14px 18px",
@@ -1024,7 +1071,7 @@ export default function UiPathCourse() {
             <span style={{ fontSize: 28 }}>{topic.icon}</span>
             <div>
               <div style={{ fontSize: 18, fontWeight: 800, color: topic.color }}>{topic.title}</div>
-              <div style={{ fontSize: 11, color: "#64748B", marginTop: 2 }}>{topic.subtitle}</div>
+              <div style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 2 }}>{topic.subtitle}</div>
             </div>
           </div>
 
@@ -1039,14 +1086,14 @@ export default function UiPathCourse() {
                 onClick={() => setActiveTab(tab.key)}
                 style={{
                   padding: "7px 18px",
-                  background: activeTab === tab.key ? topic.color : "#0F172A",
-                  border: `1px solid ${activeTab === tab.key ? topic.color : "#1E293B"}`,
+                  background: activeTab === tab.key ? topic.color : "var(--bg-section-header)",
+                  border: `1px solid ${activeTab === tab.key ? topic.color : "var(--border-primary)"}`,
                   borderRadius: 20,
                   cursor: "pointer",
                   fontSize: 11,
                   fontWeight: 700,
                   letterSpacing: 0.5,
-                  color: activeTab === tab.key ? "#000" : "#64748B",
+                  color: activeTab === tab.key ? "#000" : "var(--text-muted)",
                   textTransform: "uppercase",
                   transition: "all 0.2s"
                 }}
@@ -1063,10 +1110,10 @@ export default function UiPathCourse() {
             return (
               <div key={key} style={{
                 marginBottom: 12,
-                border: "1px solid #1E293B",
+                border: "1px solid var(--border-primary)",
                 borderRadius: 10,
                 overflow: "hidden",
-                background: "#0D1117"
+                background: "var(--bg-card)"
               }}>
                 <button
                   onClick={() => toggleSection(key)}
@@ -1074,7 +1121,7 @@ export default function UiPathCourse() {
                     width: "100%",
                     textAlign: "left",
                     padding: "11px 15px",
-                    background: "#0F172A",
+                    background: "var(--bg-section-header)",
                     border: "none",
                     cursor: "pointer",
                     display: "flex",
@@ -1088,7 +1135,7 @@ export default function UiPathCourse() {
                       background: topic.color,
                       boxShadow: `0 0 7px ${topic.color}`
                     }} />
-                    <span style={{ fontSize: 13, fontWeight: 700, color: "#CBD5E1" }}>
+                    <span style={{ fontSize: 13, fontWeight: 700, color: "var(--text-primary)" }}>
                       {section.heading}
                     </span>
                   </div>
@@ -1099,12 +1146,12 @@ export default function UiPathCourse() {
                 {isOpen && (
                   <div style={{ padding: "14px 16px" }}>
                     <div
-                      style={{ fontSize: 16, lineHeight: 1.8, color: "#94A3B8", marginBottom: 12 }}
+                      style={{ fontSize: 16, lineHeight: 1.8, color: "var(--text-secondary)", marginBottom: 12 }}
                       dangerouslySetInnerHTML={{ __html: section.content }}
                     />
                     {section.code && (
                       <div style={{
-                        background: "#060A12",
+                        background: "var(--bg-code)",
                         border: `1px solid ${topic.color}28`,
                         borderRadius: 8,
                         padding: "12px 14px",
@@ -1144,8 +1191,8 @@ export default function UiPathCourse() {
           {/* Quiz tab */}
           {activeTab === "quiz" && (
             <div style={{
-              background: "#0D1117",
-              border: "1px solid #1E293B",
+              background: "var(--bg-card)",
+              border: "1px solid var(--border-primary)",
               borderRadius: 10,
               padding: "16px"
             }}>
