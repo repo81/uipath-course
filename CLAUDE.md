@@ -23,6 +23,10 @@ This is a single-page React 19 + Vite 8 app — a UiPath Studio certification st
 - `QuizSection` — stateful component that renders one topic's quiz questions. Tracks `answers` and `submitted` state per question index. Shows trap/explanation feedback after submission.
 - `UiPathCourse` (default export) — root component. Manages `active` topic, `openSections` (collapsible accordion state keyed by `"${topicId}-${sectionIndex}"`), `activeTab` (`"content"` | `"quiz"`), `sidebarOpen` (boolean), and `isMobile` (boolean, breakpoint 768px). A `useEffect` syncs `isMobile`/`sidebarOpen` on window resize. Switching topics resets openSections and activeTab; on mobile it also auto-closes the sidebar.
 
-**Styling:** 100% inline `style` props — no CSS classes, no Tailwind, no CSS-in-JS library. The color theme is dark navy (`#0A0E1A` background) with per-topic accent colors. Section content (`section.content`) is rendered via `dangerouslySetInnerHTML` and contains HTML markup (bold, ul/li tags).
+**Styling:** 100% inline `style` props — no CSS classes, no Tailwind, no CSS-in-JS library. `src/App.css` and `src/index.css` exist but are vestigial; all real styling is inline. The color theme is dark navy (`#0A0E1A` background) with per-topic accent colors. Section content (`section.content`) is rendered via `dangerouslySetInnerHTML` and contains HTML markup (bold, ul/li tags).
 
-**No routing, no external state, no API calls.** To add a new topic, append an object to the `topics` array following the existing shape.
+**Code block rendering:** Lines in `section.code` starting with `//` or `'` render gray (`#475569`), lines starting with `->` render green (`#86EFAC`), all other lines render blue (`#7DD3FC`). Use these conventions when authoring code examples.
+
+**Section open state:** Sections default to open. The accordion uses `openSections[key] !== false` — only explicitly closed sections are tracked in state.
+
+**No routing, no external state, no API calls.** To add a new topic, append an object to the `topics` array following the existing shape. Design specs and implementation plans live in `docs/superpowers/`.
