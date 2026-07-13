@@ -1,4 +1,27 @@
-import { useState, useEffect, useRef } from "react";
+import { memo, useCallback, useEffect, useRef, useState } from "react";
+import { uiadav1Quiz } from "./data/uiadav1Quiz";
+
+const TIMED_EXAM_ID = "uiadav1-practice-exam";
+
+const createExamTimer = (resetKey = 0) => ({
+  started: false,
+  running: false,
+  totalSeconds: 0,
+  currentQuestion: 0,
+  inProgressTimes: {},
+  completedTimes: {},
+  answeredCount: 0,
+  resetKey,
+});
+
+const formatDuration = (seconds, includeHours = false) => {
+  const hours = Math.floor(seconds / 3600);
+  const minutes = Math.floor((seconds % 3600) / 60);
+  const remainingSeconds = seconds % 60;
+  const parts = [minutes, remainingSeconds];
+  if (includeHours || hours > 0) parts.unshift(hours);
+  return parts.map(part => String(part).padStart(2, "0")).join(":");
+};
 
 const topics = [
   {
@@ -676,21 +699,117 @@ Main.xaml                         <- root caller
         explanation: "A Hit Count of 5 means: silently skip the first 4 executions, pause on exactly the 5th execution, then stop tracking. It fires once at the Nth hit — useful for catching bugs that only appear after several iterations."
       }
     ]
+  },
+  {
+    id: "uiadav1-practice-exam",
+    icon: "✓",
+    title: "UI-ADAv1 Practice Exam",
+    subtitle: "161 Interactive Certification Questions",
+    color: "#F59E0B",
+    quizLabel: "UI-ADAV1 PRACTICE EXAM",
+    sections: [
+      {
+        heading: "About This Practice Exam",
+        content: `This practice exam was imported from the supplied <strong>UI-ADAv1 question-and-answer PDF</strong>. It contains <strong>161 complete multiple-choice questions</strong>, with the source question number retained on every card.<br/><br/>
+Use the <strong>Exam Questions</strong> tab to select an answer, check it immediately, and review the supplied explanation. When the source only provided an answer key, the feedback identifies the keyed answer without inventing an explanation.<br/><br/>
+<strong>Import note:</strong> Source questions 2, 20, 82, 134, 147, and 155 depend on missing visual or drag-and-drop content and are not included in the interactive set. The source PDF also contains two different questions numbered 151; both are included.`
+      }
+    ],
+    quiz: uiadav1Quiz
   }
 ];
 
-function QuizSection({ questions, color }) {
+function ExamTimerPanel({ timer, color, totalQuestions, onReset, compact = false }) {
+  const currentTime = timer.currentQuestion === null
+    ? 0
+    : timer.inProgressTimes[timer.currentQuestion] ?? 0;
+
+  return (
+    <div style={{
+      margin: compact ? "0 0 16px" : "12px",
+      padding: "12px",
+      background: `linear-gradient(135deg, ${color}12, var(--bg-section-header))`,
+      border: `1px solid ${color}45`,
+      borderRadius: 9,
+    }}>
+      <div style={{ fontSize: 9, color, letterSpacing: 1.5, fontWeight: 800, marginBottom: 10 }}>
+        EXAM TIMER
+      </div>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+        <div>
+          <div style={{ fontSize: 8, color: "var(--text-faint)", letterSpacing: 1 }}>TOTAL TIME</div>
+          <div style={{ fontSize: 17, color: "var(--text-primary)", fontWeight: 800, marginTop: 3 }}>
+            {formatDuration(timer.totalSeconds, true)}
+          </div>
+        </div>
+        <div>
+          <div style={{ fontSize: 8, color: "var(--text-faint)", letterSpacing: 1 }}>
+            {timer.currentQuestion === null ? "STATUS" : `QUESTION ${timer.currentQuestion + 1}`}
+          </div>
+          <div style={{ fontSize: 17, color: timer.currentQuestion === null ? "#34D399" : color, fontWeight: 800, marginTop: 3 }}>
+            {timer.currentQuestion === null ? "DONE" : formatDuration(currentTime)}
+          </div>
+        </div>
+      </div>
+      <div style={{ fontSize: 9, color: "var(--text-muted)", marginTop: 10 }}>
+        {timer.answeredCount} of {totalQuestions} answered
+      </div>
+      <div style={{ height: 4, background: "var(--border-primary)", borderRadius: 2, marginTop: 6, overflow: "hidden" }}>
+        <div style={{
+          width: `${(timer.answeredCount / totalQuestions) * 100}%`,
+          height: "100%",
+          background: color,
+          transition: "width 0.2s ease",
+        }} />
+      </div>
+      <button
+        type="button"
+        onClick={onReset}
+        disabled={!timer.started}
+        style={{
+          width: "100%",
+          marginTop: 10,
+          padding: "6px 8px",
+          background: "transparent",
+          border: "1px solid var(--border-primary)",
+          borderRadius: 6,
+          color: timer.started ? "var(--text-secondary)" : "var(--text-faint)",
+          cursor: timer.started ? "pointer" : "not-allowed",
+          fontFamily: "inherit",
+          fontSize: 9,
+          fontWeight: 700,
+          letterSpacing: 0.5,
+        }}
+      >
+        RESET TEST & TIMER
+      </button>
+    </div>
+  );
+}
+
+const QuizSection = memo(function QuizSection({
+  questions,
+  color,
+  label = "CERTIFICATION TRAP QUESTIONS",
+  questionTimes,
+  onQuestionFocus,
+  onQuestionSubmit,
+}) {
   const [answers, setAnswers] = useState({});
   const [submitted, setSubmitted] = useState({});
 
   const handleSelect = (qi, oi) => {
     if (submitted[qi]) return;
+    onQuestionFocus?.(qi);
     setAnswers(prev => ({ ...prev, [qi]: oi }));
   };
 
   const handleSubmit = (qi) => {
     if (answers[qi] === undefined) return;
-    setSubmitted(prev => ({ ...prev, [qi]: true }));
+    const nextSubmitted = { ...submitted, [qi]: true };
+    const nextQuestion = questions.findIndex((_, index) => !nextSubmitted[index]);
+    setSubmitted(nextSubmitted);
+    onQuestionSubmit?.(qi, nextQuestion);
   };
 
   const totalSubmitted = Object.keys(submitted).length;
@@ -700,7 +819,7 @@ function QuizSection({ questions, color }) {
     <div>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
         <div style={{ fontSize: 11, color, letterSpacing: 2, fontWeight: 700 }}>
-          CERTIFICATION TRAP QUESTIONS
+          {label}
         </div>
         {totalSubmitted > 0 && (
           <div style={{
@@ -730,8 +849,15 @@ function QuizSection({ questions, color }) {
             background: "var(--bg-root)"
           }}>
             <div style={{ padding: "12px 16px", borderBottom: "1px solid var(--border-primary)" }}>
-              <div style={{ fontSize: 10, color: "var(--text-muted)", marginBottom: 5, letterSpacing: 1 }}>
-                QUESTION {qi + 1} OF {questions.length}
+              <div style={{ display: "flex", justifyContent: "space-between", gap: 10, marginBottom: 5 }}>
+                <span style={{ fontSize: 10, color: "var(--text-muted)", letterSpacing: 1 }}>
+                  {q.sourceNumber ? `SOURCE QUESTION ${q.sourceNumber} · ` : ""}QUESTION {qi + 1} OF {questions.length}
+                </span>
+                {isSubmitted && questionTimes?.[qi] !== undefined && (
+                  <span style={{ fontSize: 10, color, letterSpacing: 1, whiteSpace: "nowrap" }}>
+                    TIME {formatDuration(questionTimes[qi])}
+                  </span>
+                )}
               </div>
               <div style={{ fontSize: 13, color: "var(--text-primary)", lineHeight: 1.6, fontWeight: 600 }}>
                 {q.q}
@@ -763,10 +889,13 @@ function QuizSection({ questions, color }) {
                   : textColor;
 
                 return (
-                  <div
+                  <button
+                    type="button"
                     key={oi}
                     onClick={() => handleSelect(qi, oi)}
+                    disabled={isSubmitted}
                     style={{
+                      width: "100%",
                       padding: "9px 12px",
                       marginBottom: 6,
                       border: `1px solid ${borderColor}`,
@@ -774,7 +903,9 @@ function QuizSection({ questions, color }) {
                       cursor: isSubmitted ? "default" : "pointer",
                       background: bg,
                       color: textColor,
+                      fontFamily: "inherit",
                       fontSize: 16,
+                      textAlign: "left",
                       lineHeight: 1.5,
                       display: "flex",
                       alignItems: "flex-start",
@@ -794,7 +925,7 @@ function QuizSection({ questions, color }) {
                       {String.fromCharCode(65 + oi)}
                     </span>
                     {opt}
-                  </div>
+                  </button>
                 );
               })}
 
@@ -834,12 +965,16 @@ function QuizSection({ questions, color }) {
                   }}>
                     {isCorrect ? "✓ CORRECT" : "✗ INCORRECT — Correct answer: " + String.fromCharCode(65 + q.answer)}
                   </div>
-                  <div style={{ fontSize: 11, color: "#FBBF24", marginBottom: 8, lineHeight: 1.7 }}>
-                    <strong style={{ color: "#FCD34D" }}>TRAP: </strong>{q.trap}
-                  </div>
-                  <div style={{ fontSize: 11, color: "var(--text-secondary)", lineHeight: 1.7 }}>
-                    <strong style={{ color: "var(--text-primary)" }}>Why: </strong>{q.explanation}
-                  </div>
+                  {q.trap && (
+                    <div style={{ fontSize: 11, color: "#FBBF24", marginBottom: 8, lineHeight: 1.7 }}>
+                      <strong style={{ color: "#FCD34D" }}>TRAP: </strong>{q.trap}
+                    </div>
+                  )}
+                  {q.explanation && (
+                    <div style={{ fontSize: 11, color: "var(--text-secondary)", lineHeight: 1.7 }}>
+                      <strong style={{ color: "var(--text-primary)" }}>Why: </strong>{q.explanation}
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -848,7 +983,7 @@ function QuizSection({ questions, color }) {
       })}
     </div>
   );
-}
+});
 
 export default function UiPathCourse() {
   const rootRef = useRef(null);
@@ -874,6 +1009,7 @@ export default function UiPathCourse() {
   const [activeTab, setActiveTab] = useState("content");
   const [sidebarOpen, setSidebarOpen] = useState(window.innerWidth >= 768);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+  const [examTimer, setExamTimer] = useState(() => createExamTimer());
 
   useEffect(() => {
     const handleResize = () => {
@@ -889,13 +1025,99 @@ export default function UiPathCourse() {
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
+  useEffect(() => {
+    if (!examTimer.running) return undefined;
+
+    const intervalId = window.setInterval(() => {
+      setExamTimer(prev => {
+        if (!prev.running || prev.currentQuestion === null) return prev;
+        return {
+          ...prev,
+          totalSeconds: prev.totalSeconds + 1,
+          inProgressTimes: {
+            ...prev.inProgressTimes,
+            [prev.currentQuestion]: (prev.inProgressTimes[prev.currentQuestion] ?? 0) + 1,
+          },
+        };
+      });
+    }, 1000);
+
+    return () => window.clearInterval(intervalId);
+  }, [examTimer.running]);
+
   const topic = topics.find(t => t.id === active);
 
+  const resetExamTimer = useCallback(() => {
+    const restartImmediately = active === TIMED_EXAM_ID && activeTab === "quiz";
+    setExamTimer(prev => ({
+      ...createExamTimer(prev.resetKey + 1),
+      started: restartImmediately,
+      running: restartImmediately,
+      inProgressTimes: restartImmediately ? { 0: 0 } : {},
+    }));
+  }, [active, activeTab]);
+
+  const startExamTimer = useCallback(() => {
+    setExamTimer(prev => prev.started ? prev : {
+      ...prev,
+      started: true,
+      running: true,
+      currentQuestion: 0,
+      inProgressTimes: { 0: 0 },
+    });
+  }, []);
+
+  const focusTimedQuestion = useCallback((questionIndex) => {
+    setExamTimer(prev => {
+      if (!prev.started || Object.hasOwn(prev.completedTimes, questionIndex)) return prev;
+      return {
+        ...prev,
+        currentQuestion: questionIndex,
+        inProgressTimes: {
+          ...prev.inProgressTimes,
+          [questionIndex]: prev.inProgressTimes[questionIndex] ?? 0,
+        },
+      };
+    });
+  }, []);
+
+  const submitTimedQuestion = useCallback((questionIndex, nextQuestion) => {
+    setExamTimer(prev => {
+      if (!prev.started || Object.hasOwn(prev.completedTimes, questionIndex)) return prev;
+      const completedTimes = {
+        ...prev.completedTimes,
+        [questionIndex]: prev.inProgressTimes[questionIndex] ?? 0,
+      };
+      const answeredCount = Object.keys(completedTimes).length;
+      const isComplete = answeredCount === uiadav1Quiz.length;
+
+      return {
+        ...prev,
+        completedTimes,
+        answeredCount,
+        currentQuestion: isComplete ? null : nextQuestion,
+        running: !isComplete,
+        inProgressTimes: nextQuestion < 0 ? prev.inProgressTimes : {
+          ...prev.inProgressTimes,
+          [nextQuestion]: prev.inProgressTimes[nextQuestion] ?? 0,
+        },
+      };
+    });
+  }, []);
+
   const handleTopicChange = (id) => {
+    if (active === TIMED_EXAM_ID && id !== TIMED_EXAM_ID) {
+      setExamTimer(prev => createExamTimer(prev.resetKey + 1));
+    }
     setActive(id);
     setOpenSections({});
     setActiveTab("content");
     if (isMobile) setSidebarOpen(false);
+  };
+
+  const handleTabChange = (tab) => {
+    setActiveTab(tab);
+    if (active === TIMED_EXAM_ID && tab === "quiz") startExamTimer();
   };
 
   const toggleSection = (key) => {
@@ -1027,6 +1249,14 @@ export default function UiPathCourse() {
                 </div>
               </button>
             ))}
+            {active === TIMED_EXAM_ID && (
+              <ExamTimerPanel
+                timer={examTimer}
+                color={topic.color}
+                totalQuestions={topic.quiz.length}
+                onReset={resetExamTimer}
+              />
+            )}
           </div>
         </div>
 
@@ -1083,7 +1313,7 @@ export default function UiPathCourse() {
             ].map(tab => (
               <button
                 key={tab.key}
-                onClick={() => setActiveTab(tab.key)}
+                onClick={() => handleTabChange(tab.key)}
                 style={{
                   padding: "7px 18px",
                   background: activeTab === tab.key ? topic.color : "var(--bg-section-header)",
@@ -1102,6 +1332,16 @@ export default function UiPathCourse() {
               </button>
             ))}
           </div>
+
+          {isMobile && active === TIMED_EXAM_ID && examTimer.started && (
+            <ExamTimerPanel
+              timer={examTimer}
+              color={topic.color}
+              totalQuestions={topic.quiz.length}
+              onReset={resetExamTimer}
+              compact
+            />
+          )}
 
           {/* Content tab */}
           {activeTab === "content" && topic.sections.map((section, i) => {
@@ -1189,16 +1429,23 @@ export default function UiPathCourse() {
           })}
 
           {/* Quiz tab */}
-          {activeTab === "quiz" && (
-            <div style={{
-              background: "var(--bg-card)",
-              border: "1px solid var(--border-primary)",
-              borderRadius: 10,
-              padding: "16px"
-            }}>
-              <QuizSection questions={topic.quiz} color={topic.color} />
-            </div>
-          )}
+          <div style={{
+            display: activeTab === "quiz" ? "block" : "none",
+            background: "var(--bg-card)",
+            border: "1px solid var(--border-primary)",
+            borderRadius: 10,
+            padding: "16px"
+          }}>
+            <QuizSection
+              key={`${topic.id}-${topic.id === TIMED_EXAM_ID ? examTimer.resetKey : 0}`}
+              questions={topic.quiz}
+              color={topic.color}
+              label={topic.quizLabel}
+              questionTimes={topic.id === TIMED_EXAM_ID ? examTimer.completedTimes : undefined}
+              onQuestionFocus={topic.id === TIMED_EXAM_ID ? focusTimedQuestion : undefined}
+              onQuestionSubmit={topic.id === TIMED_EXAM_ID ? submitTimedQuestion : undefined}
+            />
+          </div>
         </div>
       </div>
     </div>
