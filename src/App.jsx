@@ -723,6 +723,12 @@ function ExamTimerPanel({ timer, color, totalQuestions, onReset, compact = false
   const currentTime = timer.currentQuestion === null
     ? 0
     : timer.inProgressTimes[timer.currentQuestion] ?? 0;
+  const averageTime = timer.answeredCount > 0
+    ? Math.round(
+        Object.values(timer.completedTimes).reduce((total, seconds) => total + seconds, 0)
+          / timer.answeredCount
+      )
+    : null;
 
   return (
     <div style={{
@@ -753,6 +759,22 @@ function ExamTimerPanel({ timer, color, totalQuestions, onReset, compact = false
       </div>
       <div style={{ fontSize: 9, color: "var(--text-muted)", marginTop: 10 }}>
         {timer.answeredCount} of {totalQuestions} answered
+      </div>
+      <div style={{
+        display: "flex",
+        alignItems: "baseline",
+        justifyContent: "space-between",
+        gap: 8,
+        marginTop: 8,
+        paddingTop: 8,
+        borderTop: "1px solid var(--border-primary)",
+      }}>
+        <div style={{ fontSize: 8, color: "var(--text-faint)", letterSpacing: 1 }}>
+          AVERAGE / QUESTION
+        </div>
+        <div style={{ fontSize: 14, color, fontWeight: 800 }}>
+          {averageTime === null ? "--:--" : formatDuration(averageTime)}
+        </div>
       </div>
       <div style={{ height: 4, background: "var(--border-primary)", borderRadius: 2, marginTop: 6, overflow: "hidden" }}>
         <div style={{
@@ -802,10 +824,6 @@ const QuizSection = memo(function QuizSection({
     if (submitted[qi]) return;
     onQuestionFocus?.(qi);
     setAnswers(prev => ({ ...prev, [qi]: oi }));
-  };
-
-  const handleSubmit = (qi) => {
-    if (answers[qi] === undefined) return;
     const nextSubmitted = { ...submitted, [qi]: true };
     const nextQuestion = questions.findIndex((_, index) => !nextSubmitted[index]);
     setSubmitted(nextSubmitted);
@@ -928,27 +946,6 @@ const QuizSection = memo(function QuizSection({
                   </button>
                 );
               })}
-
-              {!isSubmitted && (
-                <button
-                  onClick={() => handleSubmit(qi)}
-                  disabled={selected === undefined}
-                  style={{
-                    marginTop: 8,
-                    padding: "8px 22px",
-                    background: selected !== undefined ? color : "var(--border-primary)",
-                    border: "none",
-                    borderRadius: 6,
-                    color: selected !== undefined ? "#000" : "var(--text-muted)",
-                    fontSize: 16,
-                    fontWeight: 700,
-                    cursor: selected !== undefined ? "pointer" : "not-allowed",
-                    transition: "all 0.2s"
-                  }}
-                >
-                  Check Answer
-                </button>
-              )}
 
               {isSubmitted && (
                 <div style={{
