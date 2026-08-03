@@ -704,13 +704,13 @@ Main.xaml                         <- root caller
     id: "uiadav1-practice-exam",
     icon: "✓",
     title: "UI-ADAv1 Practice Exam",
-    subtitle: "161 Interactive Certification Questions",
+    subtitle: "153 Interactive Certification Questions",
     color: "#F59E0B",
     quizLabel: "UI-ADAV1 PRACTICE EXAM",
     sections: [
       {
         heading: "About This Practice Exam",
-        content: `This practice exam was imported from the supplied <strong>UI-ADAv1 question-and-answer PDF</strong>. It contains <strong>161 complete multiple-choice questions</strong>, with the source question number retained on every card.<br/><br/>
+        content: `This practice exam was imported from the supplied <strong>UI-ADAv1 question-and-answer PDF</strong>. It contains <strong>153 complete multiple-choice questions</strong>, with the source question number retained on every card.<br/><br/>
 Use the <strong>Exam Questions</strong> tab to select an answer, check it immediately, and review the supplied explanation. When the source only provided an answer key, the feedback identifies the keyed answer without inventing an explanation.<br/><br/>
 <strong>Import note:</strong> Source questions 2, 20, 82, 134, 147, and 155 depend on missing visual or drag-and-drop content and are not included in the interactive set. The source PDF also contains two different questions numbered 151; both are included.`
       }

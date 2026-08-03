@@ -21,6 +21,8 @@ const clean = (value) => value
 
 const questions = [];
 const skipped = [];
+const duplicateQuestions = [];
+const seenQuestions = new Set();
 
 for (const match of raw.matchAll(questionPattern)) {
   const sourceNumber = Number(match[1]);
@@ -55,6 +57,12 @@ for (const match of raw.matchAll(questionPattern)) {
     continue;
   }
 
+  if (seenQuestions.has(question)) {
+    duplicateQuestions.push(sourceNumber);
+    continue;
+  }
+  seenQuestions.add(question);
+
   const afterAnswer = block.slice(answerMatch.index + answerMatch[0].length);
   const explanationMatch = afterAnswer.match(/Explanation:\s*([\s\S]*)/i);
   let explanation = explanationMatch ? explanationMatch[1] : "";
@@ -73,13 +81,14 @@ for (const match of raw.matchAll(questionPattern)) {
 }
 
 const contents = `// Generated from the user-provided UI-ADAv1 practice exam PDF.\n` +
-  `// ${questions.length} complete multiple-choice questions imported; source-only visual questions were omitted.\n` +
+  `// ${questions.length} complete multiple-choice questions imported; source-only visual and duplicate questions were omitted.\n` +
   `export const uiadav1Quiz = ${JSON.stringify(questions, null, 2)};\n`;
 
 fs.mkdirSync(path.dirname(outputPath), { recursive: true });
 fs.writeFileSync(outputPath, contents, "utf8");
 
 console.log(`Imported ${questions.length} questions.`);
+console.log(`Skipped duplicate questions: ${duplicateQuestions.join(", ") || "none"}`);
 const importedNumbers = new Set(questions.map(({ sourceNumber }) => sourceNumber));
 const omittedNumbers = Array.from({ length: 166 }, (_, index) => index + 1)
   .filter((sourceNumber) => !importedNumbers.has(sourceNumber));

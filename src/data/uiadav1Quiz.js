@@ -1,6 +1,6 @@
 // Generated from the user-provided UI-ADAv1 practice exam PDF.
-// 161 complete multiple-choice questions imported; source-only visual questions were omitted.
-export const uiadav1Quiz = [
+// 153 complete multiple-choice questions after exact duplicates are removed.
+const importedQuestions = [
   {
     "sourceNumber": 1,
     "q": "How can the value be configured for each of the three arguments (one \"In\", one \"Out\", and one \"In/Out\") in the Arguments window of the Invoked Workflow?",
@@ -1951,3 +1951,7 @@ export const uiadav1Quiz = [
     "explanation": "In the Invoked Workflow’s Arguments window, the Value can be configured for each argument as follows: ? In: Variable or Hard-coded value. An In argument is an argument that passes a value from the parent workflow to the child workflow. The Value of an In argument can be configured with a variable that holds the value to be passed, or a hard- coded value that is directly entered in the Value field3. For example, if the In argument is Name and the value to be passed is “John”, the Value can be configured with a variable that contains “John”, such as strName, or a hard-coded value, such as “John”. ? Out: Variable only. An Out argument is an argument that passes a value from the child workflow to the parent workflow. The Value of an Out argument can be configured only with a variable that receives the value from the child workflow4. For example, if the Out argument is Result and the value to be passed is the sum of two numbers, the Value can be configured only with a variable that stores the sum, such as intResult. ? In/Out: Variable only. An In/Out argument is an argument that passes a value from the parent workflow to the child workflow, and then passes the modified value back to the parent workflow. The Value of an In/Out argument can be configured only with a variable that holds the initial value and receives the modified value5. For example, if the In/Out argument is Counter and the value to be passed is a number that is incremented by one in the child workflow, the Value can be configured only with a variable that contains the initial number and stores the incremented number, such as intCounter."
   }
 ];
+
+export const uiadav1Quiz = importedQuestions.filter(
+  ({ q }, index) => importedQuestions.findIndex((question) => question.q === q) === index,
+);
