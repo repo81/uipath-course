@@ -810,6 +810,7 @@ function ExamTimerPanel({ timer, color, totalQuestions, onReset, compact = false
 }
 
 const QuizSection = memo(function QuizSection({
+  topicId,
   questions,
   color,
   label = "CERTIFICATION TRAP QUESTIONS",
@@ -819,6 +820,29 @@ const QuizSection = memo(function QuizSection({
 }) {
   const [answers, setAnswers] = useState({});
   const [submitted, setSubmitted] = useState({});
+  const [savedQuestions, setSavedQuestions] = useState(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem(`uipath-saved-questions-${topicId}`) || "[]");
+      return Array.isArray(saved) ? saved.filter(index => Number.isInteger(index) && index >= 0 && index < questions.length) : [];
+    } catch {
+      return [];
+    }
+  });
+  const [showSavedOnly, setShowSavedOnly] = useState(false);
+  const [saveError, setSaveError] = useState("");
+
+  const toggleSavedQuestion = (qi) => {
+    const nextSaved = savedQuestions.includes(qi)
+      ? savedQuestions.filter(index => index !== qi)
+      : [...savedQuestions, qi];
+    try {
+      localStorage.setItem(`uipath-saved-questions-${topicId}`, JSON.stringify(nextSaved));
+      setSavedQuestions(nextSaved);
+      setSaveError("");
+    } catch {
+      setSaveError("Unable to save this question. Please allow browser storage and try again.");
+    }
+  };
 
   const handleSelect = (qi, oi) => {
     if (submitted[qi]) return;
@@ -853,7 +877,26 @@ const QuizSection = memo(function QuizSection({
         )}
       </div>
 
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 16 }}>
+        {[false, true].map(savedOnly => (
+          <button
+            key={String(savedOnly)}
+            type="button"
+            aria-pressed={showSavedOnly === savedOnly}
+            onClick={() => setShowSavedOnly(savedOnly)}
+            style={{ padding: "8px 12px", borderRadius: 7, border: `1px solid ${showSavedOnly === savedOnly ? color : "var(--border-primary)"}`, background: "var(--bg-root)", color: showSavedOnly === savedOnly ? color : "var(--text-secondary)", cursor: "pointer", fontFamily: "inherit" }}
+          >
+            {savedOnly ? `Saved Questions (${savedQuestions.length})` : "All Questions"}
+          </button>
+        ))}
+      </div>
+      {saveError && <p role="alert" style={{ color: "#F87171", fontSize: 12 }}>{saveError}</p>}
+      {showSavedOnly && savedQuestions.length === 0 && (
+        <p style={{ color: "var(--text-secondary)", fontSize: 13 }}>No saved questions yet. Choose All Questions and use Save Question to bookmark one for later.</p>
+      )}
+
       {questions.map((q, qi) => {
+        if (showSavedOnly && !savedQuestions.includes(qi)) return null;
         const isSubmitted = !!submitted[qi];
         const selected = answers[qi];
         const isCorrect = selected === q.answer;
@@ -867,10 +910,19 @@ const QuizSection = memo(function QuizSection({
             background: "var(--bg-root)"
           }}>
             <div style={{ padding: "12px 16px", borderBottom: "1px solid var(--border-primary)" }}>
-              <div style={{ display: "flex", justifyContent: "space-between", gap: 10, marginBottom: 5 }}>
+              <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", justifyContent: "space-between", gap: 10, marginBottom: 5 }}>
                 <span style={{ fontSize: 10, color: "var(--text-muted)", letterSpacing: 1 }}>
                   {q.sourceNumber ? `SOURCE QUESTION ${q.sourceNumber} · ` : ""}QUESTION {qi + 1} OF {questions.length}
                 </span>
+                <button
+                  type="button"
+                  aria-pressed={savedQuestions.includes(qi)}
+                  aria-label={`${savedQuestions.includes(qi) ? "Unsave" : "Save"} question ${qi + 1}`}
+                  onClick={() => toggleSavedQuestion(qi)}
+                  style={{ padding: "7px 10px", border: `1px solid ${savedQuestions.includes(qi) ? color : "var(--border-primary)"}`, borderRadius: 7, background: "var(--bg-option)", color: savedQuestions.includes(qi) ? color : "var(--text-secondary)", cursor: "pointer", fontFamily: "inherit", fontSize: 12 }}
+                >
+                  {savedQuestions.includes(qi) ? "Saved Question" : "Save Question"}
+                </button>
                 {isSubmitted && questionTimes?.[qi] !== undefined && (
                   <span style={{ fontSize: 10, color, letterSpacing: 1, whiteSpace: "nowrap" }}>
                     TIME {formatDuration(questionTimes[qi])}
@@ -1435,6 +1487,7 @@ export default function UiPathCourse() {
           }}>
             <QuizSection
               key={`${topic.id}-${topic.id === TIMED_EXAM_ID ? examTimer.resetKey : 0}`}
+              topicId={topic.id}
               questions={topic.quiz}
               color={topic.color}
               label={topic.quizLabel}
