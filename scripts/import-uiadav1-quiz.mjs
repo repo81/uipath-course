@@ -1,95 +1,84 @@
-import fs from "node:fs";
+﻿import fs from "node:fs";
 import path from "node:path";
+import { getDocument, OPS } from "pdfjs-dist/legacy/build/pdf.mjs";
+import { createCanvas } from "@napi-rs/canvas";
 
-const [, , inputPath, outputPath] = process.argv;
+const inputPath = process.argv[2] || "public/uipath.pdf";
+const outputPath = process.argv[3] || "src/data/uiadav1Quiz.js";
+const assetDir = "public/exam-exhibits";
+const document = await getDocument({ data: new Uint8Array(fs.readFileSync(inputPath)), useSystemFonts: true }).promise;
+const clean = value => value.replace(/\s+/g, " ").trim();
+let raw = "";
+let currentNumber = null;
+let answered = true;
+const sourcePages = new Map();
+const exhibits = new Map();
+fs.mkdirSync(assetDir, { recursive: true });
 
-if (!inputPath || !outputPath) {
-  console.error("Usage: node scripts/import-uiadav1-quiz.mjs <extracted.txt> <output.js>");
-  process.exit(1);
+for (let pageNumber = 1; pageNumber <= document.numPages; pageNumber++) {
+  const page = await document.getPage(pageNumber);
+  const content = await page.getTextContent();
+  // Exclude rotated background watermarks, branding, and transaction footers.
+  const items = content.items.filter(item => item.str && Math.abs(item.transform[1]) < 0.1
+    && !/CertEmpire|Get Simulator Access|\{"userId"/i.test(item.str));
+  let text = "";
+  let previousY = null;
+  for (const item of items) {
+    if (previousY !== null && Math.abs(item.transform[5] - previousY) > 3) text += "\n";
+    text += item.str + (item.hasEOL ? "\n" : " ");
+    previousY = item.transform[5];
+  }
+  raw += text + "\n";
+  const question = text.match(/Question:\s*(\d+)/);
+  if (question) {
+    currentNumber = Number(question[1]);
+    sourcePages.set(currentNumber, pageNumber);
+    answered = false;
+  }
+  const answerItem = items.find(item => /^Answer:\s*$/.test(item.str.trim()));
+  if (currentNumber && !answered) {
+    const operators = await page.getOperatorList();
+    const hasImage = operators.fnArray.some(op => [OPS.paintImageXObject, OPS.paintInlineImageXObject, OPS.paintImageMaskXObject].includes(op));
+    if (hasImage) {
+      const viewport = page.getViewport({ scale: 1.5 });
+      const canvas = createCanvas(Math.ceil(viewport.width), Math.ceil(viewport.height));
+      await page.render({ canvasContext: canvas.getContext("2d"), viewport }).promise;
+      const questionItem = items.find(item => /^Question:/.test(item.str.trim()));
+      const top = questionItem ? Math.max(0, viewport.height - (questionItem.transform[5] + 22) * 1.5) : 55;
+      const bottom = answerItem ? viewport.height - (answerItem.transform[5] + 12) * 1.5 : viewport.height - 65;
+      if (bottom > top) {
+        const cropped = createCanvas(canvas.width - 80, Math.ceil(bottom - top));
+        cropped.getContext("2d").drawImage(canvas, 40, top, canvas.width - 80, bottom - top, 0, 0, cropped.width, cropped.height);
+        const name = `question-${currentNumber}-page-${pageNumber}.webp`;
+        fs.writeFileSync(path.join(assetDir, name), cropped.toBuffer("image/webp"));
+        exhibits.set(currentNumber, [...(exhibits.get(currentNumber) || []), `exam-exhibits/${name}`]);
+      }
+    }
+  }
+  if (answerItem) answered = true;
 }
-
-const raw = fs.readFileSync(inputPath, "utf8");
-const questionPattern = /Question:\s*(\d+)\b[\s\S]*?(?=Question:\s*\d+\b|$)/g;
-
-const clean = (value) => value
-  .replace(/--\s*\d+\s+of\s+99\s*--/gi, " ")
-  .replace(/Ui-ADAv1:\s*Actual Exam Q&A\s*\|\s*CLEARCATNET/gi, " ")
-  .replace(/^Options:\s*$/gim, " ")
-  .replace(/[\t\r\n]+/g, " ")
-  .replace(/\s{2,}/g, " ")
-  .trim();
 
 const questions = [];
-const skipped = [];
-const duplicateQuestions = [];
-const seenQuestions = new Set();
-
-for (const match of raw.matchAll(questionPattern)) {
+for (const match of raw.matchAll(/Question:\s*(\d+)\b([\s\S]*?)(?=Question:\s*\d+\b|$)/g)) {
   const sourceNumber = Number(match[1]);
-  const block = match[0].replace(/^Question:\s*\d+\b[^\r\n]*[\r\n]*/i, "");
-  const answerMatch = block.match(/^(?:Correct Answer|Answer(?:\(s\))?)\s*[:\-]\s*([A-H])/mi);
-
-  if (!answerMatch) {
-    skipped.push(sourceNumber);
-    continue;
-  }
-
-  const questionAndOptions = block.slice(0, answerMatch.index);
-  const optionPattern = /^(?:•\s*)?([A-H])(?:\.|-)\s*/gm;
-  const optionMatches = [...questionAndOptions.matchAll(optionPattern)];
-
-  if (optionMatches.length < 2) {
-    skipped.push(sourceNumber);
-    continue;
-  }
-
-  const question = clean(questionAndOptions.slice(0, optionMatches[0].index));
-  const options = optionMatches.map((optionMatch, index) => {
-    const start = optionMatch.index + optionMatch[0].length;
-    const end = optionMatches[index + 1]?.index ?? questionAndOptions.length;
-    return clean(questionAndOptions.slice(start, end));
-  });
-  const answerLetter = answerMatch[1].toUpperCase();
-  const answer = optionMatches.findIndex((optionMatch) => optionMatch[1].toUpperCase() === answerLetter);
-
-  if (!question || options.some((option) => !option) || answer < 0) {
-    skipped.push(sourceNumber);
-    continue;
-  }
-
-  if (seenQuestions.has(question)) {
-    duplicateQuestions.push(sourceNumber);
-    continue;
-  }
-  seenQuestions.add(question);
-
-  const afterAnswer = block.slice(answerMatch.index + answerMatch[0].length);
-  const explanationMatch = afterAnswer.match(/Explanation:\s*([\s\S]*)/i);
-  let explanation = explanationMatch ? explanationMatch[1] : "";
-  explanation = explanation
-    .split(/\bReferences?:/i)[0]
-    .replace(/\bReference:\s*[\s\S]*$/i, "");
-  explanation = clean(explanation);
-
-  questions.push({
-    sourceNumber,
-    q: question,
-    options,
-    answer,
-    explanation: explanation || `The answer key supplied with the practice exam identifies option ${answerLetter} as correct.`,
-  });
+  const block = match[2];
+  const answerMatch = block.match(/\bAnswer:\s*([\s\S]*?)(?=Explanation:|$)/);
+  if (!answerMatch) throw new Error(`Missing answer for question ${sourceNumber}`);
+  const beforeAnswer = block.slice(0, answerMatch.index);
+  const optionMatches = [...beforeAnswer.matchAll(/^\s*([A-H])\.\s+/gm)];
+  const answerText = answerMatch[1].trim();
+  const multipleChoice = /^[A-H](?:\s*,\s*[A-H])*$/.test(answerText) && optionMatches.length >= 2;
+  const options = multipleChoice ? optionMatches.map((option, i) => clean(beforeAnswer.slice(option.index + option[0].length, optionMatches[i + 1]?.index ?? beforeAnswer.length))) : [];
+  const answers = multipleChoice ? answerText.split(/\s*,\s*/).map(letter => optionMatches.findIndex(option => option[1] === letter)) : [];
+  if (answers.some(index => index < 0) || options.some(option => !option)) throw new Error(`Invalid options for question ${sourceNumber}`);
+  const explanation = clean((block.split(/Explanation:\s*/)[1] || "").split(/\bReferences?:/i)[0]);
+  questions.push({ sourceNumber, sourcePage: sourcePages.get(sourceNumber),
+    q: clean(multipleChoice ? beforeAnswer.slice(0, optionMatches[0].index) : beforeAnswer),
+    options, answer: answers[0] ?? null, answers, answerText,
+    type: multipleChoice ? (answers.length > 1 ? "multiple" : "single") : "review",
+    explanation, exhibits: exhibits.get(sourceNumber) || [] });
 }
-
-const contents = `// Generated from the user-provided UI-ADAv1 practice exam PDF.\n` +
-  `// ${questions.length} complete multiple-choice questions imported; source-only visual and duplicate questions were omitted.\n` +
-  `export const uiadav1Quiz = ${JSON.stringify(questions, null, 2)};\n`;
-
+if (questions.length !== 377 || questions.some((q, i) => q.sourceNumber !== i + 1)) throw new Error("Expected all 377 source questions in order");
 fs.mkdirSync(path.dirname(outputPath), { recursive: true });
-fs.writeFileSync(outputPath, contents, "utf8");
-
-console.log(`Imported ${questions.length} questions.`);
-console.log(`Skipped duplicate questions: ${duplicateQuestions.join(", ") || "none"}`);
-const importedNumbers = new Set(questions.map(({ sourceNumber }) => sourceNumber));
-const omittedNumbers = Array.from({ length: 166 }, (_, index) => index + 1)
-  .filter((sourceNumber) => !importedNumbers.has(sourceNumber));
-console.log(`Skipped source questions: ${[...new Set([...skipped, ...omittedNumbers])].sort((a, b) => a - b).join(", ") || "none"}`);
+fs.writeFileSync(outputPath, `// Generated from public/uipath.pdf by scripts/import-uiadav1-quiz.mjs.\nexport const uiadav1Quiz = ${JSON.stringify(questions, null, 2)};\n`);
+console.log(`Imported ${questions.length} questions: ${questions.filter(q => q.type === "single").length} single-answer, ${questions.filter(q => q.type === "multiple").length} multiple-answer, ${questions.filter(q => q.type === "review").length} review. Preserved exhibits for ${exhibits.size} questions.`);

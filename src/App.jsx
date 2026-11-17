@@ -25,694 +25,18 @@ const formatDuration = (seconds, includeHours = false) => {
 
 const topics = [
   {
-    id: "else-if",
-    icon: "⤵",
-    title: "Else If Statements",
-    subtitle: "Control Flow Scoping",
-    color: "#00C6FF",
-    sections: [
-      {
-        heading: "What Scope Are These Activities In?",
-        content: `The <strong>Else If</strong> activity in UiPath lives inside a <strong>Flow Decision</strong> or a nested <strong>If Activity</strong> chain — it is NOT a standalone top-level activity.<br/><br/>
-<strong>Correct Scoping:</strong>
-<ul>
-  <li>An If activity is placed in a Sequence or Flowchart</li>
-  <li>Else If branches are nested If activities inside the Else branch of the outer If</li>
-  <li>Each nested If has its own Then and Else scope</li>
-</ul>
-<strong>Important:</strong> In UiPath Studio, there is no single drag-and-drop Else If block. You manually nest an If inside the Else container of the parent If.`,
-        code: `// Logical structure in UiPath:
-
-If (score >= 90)        <- Outer If (Then branch)
-  -> Log "A Grade"
-Else
-  If (score >= 75)      <- Nested If inside Else = "Else If"
-    -> Log "B Grade"
-  Else
-    If (score >= 60)    <- Another nested If = second "Else If"
-      -> Log "C Grade"
-    Else
-      -> Log "Fail"     <- Final Else`
-      },
-      {
-        heading: "Flowchart vs Sequence Scoping",
-        content: `<strong>In a Sequence:</strong> Use nested If activities. Variables from the outer scope are fully accessible inside nested Ifs.<br/><br/>
-<strong>In a Flowchart:</strong> Use multiple Flow Decision nodes connected by True/False arrows. Each decision node is at the same visual level — no nesting needed.<br/><br/>
-<strong>Recommendation:</strong> For more than 3 branches, prefer a Switch activity (equivalent to switch/case) or a Flowchart with multiple Flow Decisions.`,
-        code: `// Switch Activity — cleaner for many branches
-Switch (statusCode)
-  Case 200: Log "Success"
-  Case 404: Log "Not Found"
-  Case 500: Log "Server Error"
-  Default:  Log "Unknown Code"`
-      }
-    ],
-    quiz: [
-      {
-        q: "In UiPath Studio, how do you implement an Else If condition inside a Sequence?",
-        options: [
-          "Drag an 'Else If' activity from the Activities panel into the Else branch",
-          "Nest a second If activity inside the Else container of the first If activity",
-          "Use a Flow Decision activity inside the Sequence",
-          "Right-click the If activity and select 'Add Else If'"
-        ],
-        answer: 1,
-        trap: "Options A and D are traps — UiPath has NO standalone Else If activity and no right-click 'Add Else If'. Option C is wrong because Flow Decision belongs to Flowcharts, not Sequences.",
-        explanation: "You manually place an If activity inside the Else container. This is the most common exam trap since most programming languages have a native else-if keyword."
-      },
-      {
-        q: "A variable declared inside the Then branch of an If activity — where is it accessible?",
-        options: [
-          "Everywhere in the containing Sequence or workflow",
-          "Only inside the Then branch where it was declared",
-          "In both the Then and Else branches only",
-          "Only after the If activity completes"
-        ],
-        answer: 0,
-        trap: "This is a major trap. UiPath variables are scoped to their CONTAINER (the Sequence or Flowchart), NOT to the branch. A variable in the Variables panel is accessible throughout its entire container.",
-        explanation: "Variables in UiPath are scoped to their containing workflow or sequence — not to individual activity branches. The Variables panel scope determines access, not where you use the variable."
-      },
-      {
-        q: "When should you prefer a Switch activity over nested If activities?",
-        options: [
-          "When the condition is a Boolean True/False check",
-          "When comparing a single variable against more than 2-3 fixed discrete values",
-          "When the branches contain asynchronous operations",
-          "Switch and nested If are always interchangeable"
-        ],
-        answer: 1,
-        trap: "Option A is wrong — Switch does NOT work with Boolean conditions, only discrete values (Integer, String, Enum). Option D is false; Switch requires a single variable compared to constants, making range checks impossible.",
-        explanation: "Switch is ideal for multiple fixed-value comparisons (status codes, category names). For Boolean logic or ranges (>= 90), use nested If activities."
-      }
-    ]
-  },
-  {
-    id: "semantic",
-    icon: "✦",
-    title: "Semantic Activities",
-    subtitle: "AI-Powered UI Targeting & Form Automation",
-    color: "#A78BFA",
-    sections: [
-      {
-        heading: "What Are Semantic Activities?",
-        content: `<strong>Semantic Activities</strong> is a category of AI-powered UI automation activities in <strong>UiPath.UIAutomation.Activities</strong> that identify and interact with UI elements by <strong>functional meaning</strong> rather than rigid attribute matching.<br/><br/>
-There are two related concepts under this term:<br/>
-<ul>
-  <li><strong>Semantic Action Activities</strong> — a set of dedicated activities: Extract Form Data, Fill Form, Set Value, and Close Popup</li>
-  <li><strong>Semantic Selectors</strong> — an AI targeting method inside the Unified Target framework (Modern Activities)</li>
-</ul>
-<strong>Key fact:</strong> Semantic action activities consume <strong>AI units</strong> per request. Extract Form Data, Fill Form, and Set Value each consume one AI unit. Close Popup only consumes an AI unit when <strong>AI-Enhanced mode</strong> is explicitly enabled — in standard mode it uses no AI units.`,
-        code: `// Internal components used by Semantic Activities:
-
-DOM Extractor     <- reads the full page DOM structure
-Semantic Matching <- maps elements to their functional meaning
-Semantic Execution <- performs the interaction on the matched element
-
-// AI unit consumption per call:
-Extract Form Data  -> 1 AI unit
-Fill Form          -> 1 AI unit
-Set Value          -> 1 AI unit
-Close Popup        -> 0 AI units (standard mode)
-Close Popup        -> 1 AI unit  (AI-Enhanced mode only)`
-      },
-      {
-        heading: "Semantic Selectors vs Classic Selectors",
-        content: `<strong>Classic Selectors</strong> (legacy activities) use XML attribute matching — tag names, ids, class names, aaname. They break when the application's UI structure changes.<br/><br/>
-<strong>Semantic Selectors</strong> (Modern Activities / Unified Target) use an AI-generated functional description of the element — for example, "the username field on the login screen." They match by <em>intent</em>, not structure, making automations resilient to UI refactors.<br/><br/>
-<strong>Important defaults:</strong>
-<ul>
-  <li>Semantic Selectors are <strong>disabled by default</strong></li>
-  <li>They activate only as a fallback <strong>after Computer Vision fails</strong></li>
-  <li>They can be promoted to primary method by disabling higher-priority methods</li>
-</ul>
-<strong>Unified Target fallback order (highest to lowest priority):</strong>`,
-        code: `// Unified Target targeting method priority:
-
-1. Strict Selector   <- exact XML attribute match (fastest, most brittle)
-2. Fuzzy Selector    <- partial attribute match (tolerates minor changes)
-3. Computer Vision   <- AI image-based detection
-4. Semantic          <- AI functional description (disabled by default, last resort)
-5. Image             <- pixel-level screenshot match
-6. Native Text       <- text content targeting`
-      },
-      {
-        heading: "Core Semantic Activities Reference",
-        content: `<strong>Extract Form Data</strong> — Extracts structured data from complex forms using AI to understand field labels and values.<br/><br/>
-<strong>Fill Form</strong> — Populates an entire form from a data source; AI determines which field maps to which value based on semantic understanding of field labels.<br/><br/>
-<strong>Set Value</strong> — Sets the value of a single semantically-identified field.<br/><br/>
-<strong>Close Popup</strong> — Closes popup dialogs. In standard mode it uses a rule-based approach (no AI units). Enabling <strong>AI-Enhanced mode</strong> uses AI to identify the correct dismiss action on complex or unusual popups.<br/><br/>
-<strong>When to use Semantic vs Traditional:</strong>
-<ul>
-  <li>Use Semantic when selectors are <strong>unstable</strong> due to frequent UI changes</li>
-  <li>Use Semantic for <strong>dynamic forms</strong> where field structure is unpredictable</li>
-  <li>Prefer traditional selectors when <strong>performance and AI unit cost</strong> are a concern</li>
-</ul>`
-      }
-    ],
-    quiz: [
-      {
-        q: "Which Semantic Activity does NOT consume AI units by default?",
-        options: [
-          "Extract Form Data",
-          "Fill Form",
-          "Set Value",
-          "Close Popup"
-        ],
-        answer: 3,
-        trap: "Close Popup is the trap. It sounds equally 'AI-powered' as the others, but in standard mode it uses a rule-based popup heuristic with zero AI unit cost. It only consumes one AI unit when AI-Enhanced mode is explicitly toggled on. The other three always consume one AI unit per request.",
-        explanation: "Extract Form Data, Fill Form, and Set Value each consume one AI unit every time they run. Close Popup is the exception — AI unit consumption is gated behind the AI-Enhanced mode toggle, which is off by default."
-      },
-      {
-        q: "Where does the Semantic Selector sit in the Unified Target fallback chain?",
-        options: [
-          "It runs first as the primary targeting method",
-          "It is disabled by default and activates only after Computer Vision fails",
-          "It is only available in Classic Activities, not Modern",
-          "It replaces the Fuzzy Selector entirely"
-        ],
-        answer: 1,
-        trap: "Option A is the main trap — 'Semantic' sounds authoritative and intelligent, so it feels like it should run first. But Semantic Selectors are actually disabled by default and sit near the bottom of the priority order, only activating as a last resort after Computer Vision has already failed.",
-        explanation: "Unified Target priority: Strict → Fuzzy → Computer Vision → Semantic → Image → Native Text. Semantic can be promoted to primary by disabling methods above it, but out of the box it is the lowest-priority active fallback."
-      },
-      {
-        q: "What is the key distinction between Classic Selectors and Semantic Selectors?",
-        options: [
-          "Classic selectors use AI descriptions; Semantic selectors use XML attributes",
-          "Classic selectors match by XML attributes; Semantic selectors match by AI functional description",
-          "Semantic selectors execute faster than Classic selectors",
-          "Semantic selectors require no design-time configuration"
-        ],
-        answer: 1,
-        trap: "Option C ('Semantic is faster') is a plausible-sounding trap — AI feels modern and quick — but Semantic selectors are actually slower: they only run after multiple other methods have failed. Option D is also wrong; Semantic selectors require a stored functional description captured at design time.",
-        explanation: "Classic selectors match rigid XML attributes (aaname, class, id) which break when UI structure changes. Semantic selectors match by functional meaning — e.g., 'the Submit button on the checkout form' — making them resilient to UI refactors even when element attributes change entirely."
-      }
-    ]
-  },
-  {
-    id: "strings",
-    icon: "🔤",
-    title: "String & List Operations",
-    subtitle: ".Join · .Concat · Substring · ElementAt",
-    color: "#34D399",
-    sections: [
-      {
-        heading: "String.Join — Combining a List into a String",
-        content: `<strong>String.Join</strong> takes a separator and a collection, and merges every element into a single string.<br/><br/>
-<strong>Signature:</strong> String.Join(separator As String, values As IEnumerable)<br/><br/>
-The separator appears BETWEEN elements only — never before the first or after the last.`,
-        code: `myList = {"Apple", "Banana", "Cherry"}  ' List(Of String)
-
-// Joining with comma:
-result = String.Join(", ", myList)
-' result = "Apple, Banana, Cherry"
-
-// Joining with newline:
-result = String.Join(Environment.NewLine, myList)
-
-// Joining with no separator:
-result = String.Join("", myList)
-' result = "AppleBananaCherry"`
-      },
-      {
-        heading: "Concat, Substring, and ElementAt",
-        content: `<strong>String.Concat / & operator</strong> — joins strings with no separator. VB.Net uses the & operator.<br/><br/>
-<strong>.Substring(startIndex, length)</strong> — extracts part of a string. Always <strong>zero-based indexing</strong>.<br/><br/>
-<strong>.ElementAt(index)</strong> — retrieves item from any IEnumerable by zero-based index.`,
-        code: `// Concatenation (VB.Net preferred):
-result = firstName & " " & lastName
-
-// Substring - "Hello World" (H=0, e=1, l=2...)
-myString.Substring(6)       ' "World" (index 6 to end)
-myString.Substring(0, 5)    ' "Hello" (5 chars from 0)
-myString.Substring(myString.Length - 5)  ' last 5 chars
-
-// List operations:
-fruits = {"Apple","Banana","Cherry"}
-fruits(1)              ' "Banana" - direct indexer
-fruits.ElementAt(1)    ' "Banana" - LINQ method
-fruits.First()         ' "Apple"
-fruits.Last()          ' "Cherry"
-fruits.Count           ' 3`
-      }
-    ],
-    quiz: [
-      {
-        q: "What does String.Join(\"-\", {\"A\",\"B\",\"C\"}) return?",
-        options: [
-          "\"A-B-C-\"",
-          "\"-A-B-C\"",
-          "\"A-B-C\"",
-          "\"ABC\""
-        ],
-        answer: 2,
-        trap: "Options A and B test whether you think the separator appears at the start or end. String.Join places the separator BETWEEN elements only — never before the first or after the last element.",
-        explanation: "String.Join places the separator strictly between elements. Result is A-B-C with no leading or trailing separator character."
-      },
-      {
-        q: "Given myString = \"UiPath Studio\", what does myString.Substring(7) return?",
-        options: [
-          "\"UiPath \"",
-          "\"Studio\"",
-          "\"tudio\"",
-          "An error — Substring requires two arguments"
-        ],
-        answer: 1,
-        trap: "Option D is a trap — Substring has two valid overloads: Substring(startIndex) and Substring(startIndex, length). Option C (tudio) would be index 8. Count: U=0, i=1, P=2, a=3, t=4, h=5, space=6, S=7.",
-        explanation: "Index 7 is the S in Studio. Substring(7) returns from that position to the end of the string, giving Studio."
-      },
-      {
-        q: "What is the correct VB.Net expression to get the LAST 4 characters of a string variable named code?",
-        options: [
-          "code.Substring(code.Length - 4)",
-          "code.Substring(-4)",
-          "code.Last(4)",
-          "code.Substring(4)"
-        ],
-        answer: 0,
-        trap: "Option B is a Python-style trap — negative indexing does NOT work in .NET or VB.Net. Option C is fictional. Option D takes 4 characters from the START, not the end of the string.",
-        explanation: "To get the last N characters: Substring(Length - N). For last 4: code.Substring(code.Length - 4). This is the standard .NET pattern."
-      },
-      {
-        q: "myList.ElementAt(0) vs myList(0) — which statement is TRUE?",
-        options: [
-          "They return different results — ElementAt is 1-based, () indexer is 0-based",
-          "Both return the first element; ElementAt is a LINQ extension method that works on any IEnumerable",
-          "myList(0) only works on arrays, not on List(Of String)",
-          "ElementAt throws an error if the list has fewer than 2 items"
-        ],
-        answer: 1,
-        trap: "Option A is a critical trap — ElementAt is 0-based, exactly like the direct indexer. There is no 1-based default indexing in .NET collections. Option C is false — List(Of T) fully supports the () indexer.",
-        explanation: "Both return the element at index 0 (the first item). ElementAt is a LINQ method that works on any IEnumerable, while () is the direct List indexer. For a List they are functionally identical."
-      }
-    ]
-  },
-  {
-    id: "gettext",
-    icon: "📋",
-    title: "Get Text & FindText",
-    subtitle: "Scraping UI Content",
-    color: "#FB923C",
-    sections: [
-      {
-        heading: "Get Text Activity",
-        content: `<strong>Get Text</strong> extracts the visible text content from a UI element (label, textbox, span, etc.).<br/><br/>
-<ul>
-  <li>Package: UiPath.UIAutomation.Activities</li>
-  <li>Output property: Text (String variable)</li>
-  <li>Must be inside an Application/Browser scope or active window context</li>
-  <li>WaitForReady — set to INTERACTIVE to wait before scraping</li>
-  <li>Timeout — how long to wait for element (default 30 seconds)</li>
-</ul>`,
-        code: `// Typical usage flow:
-1. Attach Use Application/Browser to your window
-2. Drag Get Text inside it
-3. Click Indicate on screen to set selector
-4. Create output variable: extractedText (String)
-5. Set Text = extractedText
-
-// Then use the variable:
-Log Message: extractedText
-If extractedText.Contains("Success") Then ...`
-      },
-      {
-        heading: "UiPath.Core.Activities.FindText",
-        content: `<strong>FindText</strong> searches for a specific text string within a UI element and returns a <strong>UiElement</strong> reference.<br/><br/>
-<ul>
-  <li>Namespace: UiPath.Core.Activities (Classic Activities package)</li>
-  <li>Output: FoundElement — a UiElement you can click, hover, or use as an anchor</li>
-  <li>Use case: Dynamic text whose position changes — find a label to anchor to adjacent value</li>
-  <li>Properties: Text, SearchTarget, FoundElement, Occurrence, RegularExpression</li>
-</ul>`,
-        code: `// FindText + anchoring pattern:
-FindText
-  Text = "Invoice Total:"
-  FoundElement -> labelElement (UiElement)
-
-// Use labelElement as anchor
-// to find the dynamically positioned adjacent value
-
-// Classic selector anchoring:
-<webctrl aaname='Invoice Total:' />
-<webctrl idx='1' />    <- sibling element next to found text`
-      }
-    ],
-    quiz: [
-      {
-        q: "What is the output variable type of the Get Text activity?",
-        options: [
-          "UiElement",
-          "Object",
-          "String",
-          "GenericValue"
-        ],
-        answer: 2,
-        trap: "Option A (UiElement) is the output of FindText, not Get Text — a very common exam mix-up. Option D (GenericValue) is what some Data Scraping scenarios return but not Get Text.",
-        explanation: "Get Text outputs a String. FindText outputs a UiElement. Knowing which activity returns which type is a frequent certification question."
-      },
-      {
-        q: "FindText (UiPath.Core.Activities.FindText) belongs to which package type?",
-        options: [
-          "UiPath.UIAutomation.Activities (Modern experience)",
-          "UiPath.Core.Activities (Classic experience)",
-          "UiPath.System.Activities",
-          "UiPath.Web.Activities"
-        ],
-        answer: 1,
-        trap: "Option A is the trap — FindText is a CLASSIC activities package activity. This matters because if your project has modernBehavior enabled (which was the fix for the Write Range issue you encountered), classic activities may be restricted.",
-        explanation: "FindText lives in UiPath.Core.Activities — the classic package. Modern projects may need to enable classic activities or use alternative approaches."
-      },
-      {
-        q: "WaitForReady is set to INTERACTIVE on a Get Text activity. What does this mean?",
-        options: [
-          "The activity pauses and waits for the user to click a confirmation",
-          "UiPath waits until the application signals it is ready to receive user input before scraping",
-          "The activity automatically retries until text is found",
-          "It enables the activity to work with interactive PDF forms"
-        ],
-        answer: 1,
-        trap: "Option A implies human intervention — completely wrong. Option C describes retry behavior which is a separate Retry property. INTERACTIVE is an application readiness signal, not user interaction.",
-        explanation: "INTERACTIVE waits until the target application's UI thread is idle and ready for input. This prevents scraping while the app is still loading or rendering its content."
-      }
-    ]
-  },
-  {
-    id: "testcases",
-    icon: "✅",
-    title: "Test Cases",
-    subtitle: "UiPath Test Suite & Studio Testing",
-    color: "#FBBF24",
-    sections: [
-      {
-        heading: "What Are Test Cases in UiPath?",
-        content: `UiPath has a built-in <strong>Test Suite</strong> framework. Test Cases are special .xaml files designed to validate automation behavior.<br/><br/>
-<strong>Key Testing Activities:</strong>
-<ul>
-  <li><strong>Verify Expression</strong> — asserts a Boolean expression is True</li>
-  <li><strong>Verify Expression with Operator</strong> — asserts two values satisfy a comparison</li>
-  <li><strong>Verify Control Attribute</strong> — asserts a UI property equals expected value</li>
-  <li><strong>Mock Application</strong> — replaces external dependencies for isolated testing</li>
-</ul>`,
-        code: `// Test Case structure:
-// Given: Set up preconditions
-  -> Type Into: username = "testuser"
-  -> Type Into: password = "pass123"
-
-// When: Execute the action
-  -> Click: Login button
-
-// Then: Assert the outcome
-  Verify Expression: pageTitle = "Dashboard"
-  Verify Control Attribute:
-    Target = welcomeLabel
-    Attribute = "text"
-    Expression = "Welcome, testuser!"`
-      },
-      {
-        heading: "Test Case Scoping & Data Driven Testing",
-        content: `<strong>Scope Rules:</strong>
-<ul>
-  <li>Test Cases run independently — each has its own execution context</li>
-  <li>Shared setup/teardown: Test Case Setup and Test Case Teardown hooks</li>
-  <li>Variables scoped to the test case .xaml only by default</li>
-  <li>Use Arguments for data passed in via Test Data sources</li>
-</ul>
-<strong>Data Driven Test Cases:</strong> Attach an Excel/CSV file — Studio auto-runs the same Test Case once per row with that row's values as arguments.`,
-        code: `// Data-driven test case arguments:
-In: username (String)
-In: password (String)
-In: expectedResult (String)
-
-// Bind to Excel:
-TestDataFile = "TestData.xlsx"
-// Studio auto-iterates: 10 rows = 10 separate test runs`
-      }
-    ],
-    quiz: [
-      {
-        q: "Which activity is the PRIMARY assertion tool in a UiPath Test Case?",
-        options: [
-          "If Activity with a Log Message in the Else branch",
-          "Verify Expression",
-          "Assert Variable",
-          "Throw Activity with a custom exception"
-        ],
-        answer: 1,
-        trap: "Option A is a DIY workaround that does NOT integrate with Test Suite reporting. Option C (Assert Variable) does not exist as a named UiPath activity. Option D is error handling, not assertion — it would crash the workflow, not report a test failure.",
-        explanation: "Verify Expression is the built-in assertion activity. It marks the test as FAILED in Test Suite reporting if the expression is False, which is the correct behavior."
-      },
-      {
-        q: "In a Data Driven Test Case bound to a 5-row Excel file, how many test executions occur?",
-        options: [
-          "1 — the rows are steps within a single test run",
-          "5 — each row is a separate independent test execution",
-          "It depends on the Verify Expression results",
-          "5 rows are processed in a loop within a single test run"
-        ],
-        answer: 1,
-        trap: "Options A and D are the key traps. Rows are NOT sequential steps or loop iterations. Each row triggers a completely independent execution of the entire Test Case — like running the test 5 separate times with different inputs.",
-        explanation: "Each Excel row produces one full, independent test run. A 5-row file = 5 separate test results in Test Suite reporting, each with its own pass/fail status."
-      },
-      {
-        q: "When do Test Case Setup and Teardown hooks execute?",
-        options: [
-          "Setup runs once before the entire test suite; Teardown runs once after all tests complete",
-          "Setup runs before each individual test case; Teardown runs after each individual test case",
-          "Setup imports test data; Teardown exports test results to a report",
-          "They only run when triggered manually from the Test Suite panel"
-        ],
-        answer: 1,
-        trap: "Option A is the critical trap — Setup and Teardown run PER test case execution, not once for the whole suite. This distinction matters especially in data-driven tests where they run before/after EACH row's execution.",
-        explanation: "Setup runs before each individual test case (e.g., open browser, navigate to app). Teardown runs after each test (e.g., close browser, clean test data). Both run per-execution."
-      }
-    ]
-  },
-  {
-    id: "svn",
-    icon: "🗂",
-    title: "SVN Commit",
-    subtitle: "Source Control in UiPath Studio",
-    color: "#F472B6",
-    sections: [
-      {
-        heading: "SVN Integration in UiPath Studio",
-        content: `UiPath Studio integrates with <strong>Apache Subversion (SVN)</strong> for team source control.<br/><br/>
-<strong>Core SVN Operations:</strong>
-<ul>
-  <li><strong>Commit</strong> — send your local changes to the remote SVN server</li>
-  <li><strong>Update</strong> — pull latest changes from server to local</li>
-  <li><strong>Revert</strong> — discard local changes, restore last server version</li>
-  <li><strong>Show History</strong> — view all committed versions of a file</li>
-  <li><strong>Show Changes</strong> — diff local vs server version before committing</li>
-</ul>`,
-        code: `// Correct SVN workflow per session:
-1. Team tab -> Update        <- ALWAYS first
-2. Make changes to .xaml files
-3. Team tab -> Show Changes  <- review diff
-4. Team tab -> Commit
-5. Enter message: "Fix: Added error handling to Login — JIRA-101"
-6. Select files -> OK
-
-// Commit message format:
-"[Type]: [Description] — [Ticket ID]"
-Fix / Feat / Refactor / Docs`
-      },
-      {
-        heading: "SVN Conflict Resolution",
-        content: `<strong>Conflicts occur</strong> when two developers edit the same file between commits.<br/><br/>
-<strong>Resolution Steps:</strong>
-<ol>
-  <li>Conflicted files show a warning icon in the Project panel</li>
-  <li>Right-click the file -> Edit Conflicts</li>
-  <li>Choose: Accept Mine, Accept Theirs, or manual merge</li>
-  <li>After resolving, commit the merged file</li>
-</ol>
-<strong>Prevention:</strong> Update before starting work. Commit frequently in small chunks. Use separate .xaml files per developer when possible.`,
-        code: `// Conflict prevention checklist:
--> Update at start of every session
--> Commit at end of every session
--> Use separate workflow files per developer
--> Never commit broken/untested workflows
--> Use descriptive commit messages always`
-      }
-    ],
-    quiz: [
-      {
-        q: "What is the correct order of operations at the START of a work session using SVN?",
-        options: [
-          "Make changes -> Commit -> Update",
-          "Commit any pending local work -> Update -> Make new changes -> Commit",
-          "Update -> Make changes -> Commit",
-          "Make changes -> Update -> Resolve conflicts -> Commit"
-        ],
-        answer: 2,
-        trap: "Option D is dangerous — updating AFTER making local changes creates conflicts that are harder to resolve because you are merging with a dirty working copy. Always Update FIRST on a clean working copy.",
-        explanation: "Update -> Work -> Commit is the correct SVN workflow. Updating first ensures you start from the latest server state, minimizing merge conflicts."
-      },
-      {
-        q: "What does SVN Revert do to your local files?",
-        options: [
-          "Pushes your changes to the server and tags them as a revert commit",
-          "Discards ALL local uncommitted changes and restores the last committed server version",
-          "Undoes only the last single change made to the file",
-          "Creates a backup of local changes before restoring the server version"
-        ],
-        answer: 1,
-        trap: "Option A describes a Git revert commit — SVN Revert is purely a LOCAL operation and does not touch the server at all. Option C is wrong — Revert discards ALL uncommitted changes, not just the last one. Option D is false — no backup is created.",
-        explanation: "SVN Revert permanently discards all local uncommitted changes and restores the file exactly as it exists on the server. This is irreversible — use with caution."
-      },
-      {
-        q: "Developer A and Developer B both edit the same .xaml file. A commits first. What happens when B tries to commit?",
-        options: [
-          "B's commit succeeds and silently overwrites A's changes",
-          "SVN rejects B's commit — B must Update first, resolve any conflicts, then commit",
-          "SVN automatically merges the .xaml files and commits both sets of changes",
-          "B's commit is queued and applied automatically after a delay"
-        ],
-        answer: 1,
-        trap: "Option A would cause data loss — SVN detects this and prevents it. Option C is wishful thinking — .xaml files are XML and frequently conflict in ways SVN cannot auto-resolve. Option D does not exist in SVN.",
-        explanation: "SVN detects that B's local copy is out of date and rejects the commit. B must Update (which flags the conflict), resolve it manually in the merge tool, then commit the resolved version."
-      }
-    ]
-  },
-  {
-    id: "debugging",
-    icon: "🐛",
-    title: "Debugging in UiPath",
-    subtitle: "Breakpoints · Execution Controls · Debug Panels",
-    color: "#60A5FA",
-    sections: [
-      {
-        heading: "Breakpoint Types",
-        content: `<strong>Simple (F9)</strong> — Pauses every time execution reaches that activity. Toggle with F9 or right-click.<br/><br/>
-<strong>Conditional</strong> — Only pauses when a Boolean expression evaluates to True. Right-click the activity -> Breakpoint -> Add Condition.<br/><br/>
-<strong>Hit Count</strong> — Pauses after the activity has been executed N times. Perfect for loops. Configure in Breakpoints panel.<br/><br/>
-<strong>Log Message Breakpoint</strong> — Logs a value to the Output panel WITHOUT pausing execution. Non-invasive tracing during a full run.`,
-        code: `// Conditional breakpoint expressions (VB.Net):
-counter > 50
-myString = "ERROR"
-Not invoiceTotal > 0
-currentRow.Item("Status").ToString = "Failed"
-
-// Hit Count — pause on the 10th execution:
-Hit Count = 10
-
-// Log Message breakpoint format:
-"Loop: " & counter.ToString & " | Value: " & currentValue`
-      },
-      {
-        heading: "Execution Controls",
-        content: `<strong>Step Into (F11)</strong> — Executes one activity at a time and ENTERS sub-workflows to step through them.<br/><br/>
-<strong>Step Over (F10)</strong> — Executes one activity at a time but runs sub-workflows FULLY without entering them.<br/><br/>
-<strong>Step Out (Shift+F11)</strong> — Finishes executing the current sub-workflow entirely and returns to the caller.<br/><br/>
-<strong>Slow Step</strong> — Runs at reduced speed with visual highlighting. Activities light up in sequence but execution does not pause.`,
-        code: `// Execution control decision guide:
-Trace inside a sub-workflow?      -> F11 Step Into
-Trust sub-workflow, skip inside?  -> F10 Step Over
-Done inside, return to parent?    -> Shift+F11 Step Out
-Visual flow check, no pauses?     -> Slow Step
-Resume to next breakpoint?        -> F5 Continue
-Stop debugging entirely?          -> Shift+F5`
-      },
-      {
-        heading: "Debug Panels",
-        content: `<strong>Locals</strong> — Shows ALL variables in scope at the current breakpoint. Updates live as you step. Expand complex types (DataTable, List) to inspect inner values.<br/><br/>
-<strong>Watch</strong> — You manually add specific expressions to monitor. Persists across breakpoints unlike Locals which is context-dependent.<br/><br/>
-<strong>Call Stack</strong> — Shows the full hierarchy of executing workflows. Bottom = root, top = current. Click any frame to see its Locals.<br/><br/>
-<strong>Immediate</strong> — Execute any VB.Net expression in real-time while paused. Can read AND write variable values mid-execution.`,
-        code: `// Watch panel — useful expressions to pin:
-myDataTable.Rows.Count
-currentRow.Item("Status")
-invoiceTotal > 1000
-String.Join(", ", myList)
-
-// Immediate panel examples:
-? counter                    <- print current value
-counter = 0                  <- SET value mid-debug
-? myString.Substring(0,5)   <- test expression
-? DateTime.Now.ToString()    <- run any .NET code
-
-// Call Stack example:
-Main.xaml                         <- root caller
-  -> ProcessInvoices.xaml
-    -> ValidateData.xaml          <- currently here`
-      }
-    ],
-    quiz: [
-      {
-        q: "You are paused at a breakpoint INSIDE a sub-workflow called via Invoke Workflow. You want to finish the sub-workflow and return to the parent. Which key do you press?",
-        options: [
-          "F10 (Step Over)",
-          "F11 (Step Into)",
-          "Shift+F11 (Step Out)",
-          "F5 (Continue/Resume)"
-        ],
-        answer: 2,
-        trap: "Option A (Step Over) applies at the CALLER level before entering — once you are INSIDE a sub-workflow, F10 steps through it one activity at a time, not back to the parent. Option D resumes to the NEXT breakpoint which could be anywhere.",
-        explanation: "Step Out (Shift+F11) finishes all remaining activities in the current sub-workflow and returns control to the parent workflow that invoked it. This is exactly what Step Out is designed for."
-      },
-      {
-        q: "What is the key difference between the Locals panel and the Watch panel?",
-        options: [
-          "Locals shows only String variables; Watch shows all variable types",
-          "Locals automatically shows all in-scope variables; Watch shows only expressions you manually add and are persistent",
-          "Watch shows real-time values; Locals only updates when you press F5",
-          "They show identical information — Watch is simply a filtered subset of Locals"
-        ],
-        answer: 1,
-        trap: "Option A is false — Locals shows all types. Option C is wrong — both update at each step or breakpoint. Option D is false — Watch persists YOUR chosen expressions across different scopes while Locals changes entirely based on the current execution scope.",
-        explanation: "Locals is automatic and scope-dependent (changes as you move through workflows). Watch is manual and persistent — your pinned expressions stay visible regardless of which workflow scope you are in."
-      },
-      {
-        q: "A Conditional Breakpoint has the expression: counter > 5. A For Each loop runs 10 iterations (counter 1-10). How many times does execution pause?",
-        options: [
-          "10 times — every iteration triggers the breakpoint check",
-          "1 time — only when counter first becomes greater than 5",
-          "5 times — on iterations 6, 7, 8, 9, and 10",
-          "0 times — conditional breakpoints only log messages, they do not pause"
-        ],
-        answer: 2,
-        trap: "Option B is wrong — a Conditional breakpoint fires EVERY time the condition is True, not just the first time. Option D describes Log Message breakpoints, not Conditional breakpoints. Option A describes a Simple F9 breakpoint behavior.",
-        explanation: "The breakpoint evaluates counter > 5 on every iteration. It is True for iterations 6, 7, 8, 9, and 10 — so execution pauses 5 times total."
-      },
-      {
-        q: "The Immediate panel in Debug mode allows you to:",
-        options: [
-          "View all current variable values but not modify them",
-          "Only evaluate read-only expressions that do not change workflow state",
-          "Execute any VB.Net expression including reading AND writing variable values mid-execution",
-          "Send log messages to UiPath Orchestrator in real time"
-        ],
-        answer: 2,
-        trap: "Options A and B are the most common assumption traps — many developers think debug panels are read-only inspection tools. The Immediate panel can actually SET variable values during a paused execution, making it a powerful debugging tool.",
-        explanation: "The Immediate panel is fully interactive. You can read values with ? myVar, evaluate any expression, and even assign new values (myVar = 0) while paused. This lets you test edge cases without restarting the run."
-      },
-      {
-        q: "What exactly does a Hit Count breakpoint set to 5 do?",
-        options: [
-          "Pauses on every execution until 5 pauses have occurred (1st through 5th)",
-          "Pauses ONLY on the 5th execution of that activity, then stops firing",
-          "Pauses every 5th execution (5th, 10th, 15th, and so on)",
-          "Counts 5 total breakpoint hits across ALL breakpoints in the workflow then pauses"
-        ],
-        answer: 1,
-        trap: "Option A describes a Simple breakpoint limited to 5 hits — not how Hit Count works. Option C describes a modulo-style every-Nth behavior that does not exist by default. Option D is wrong — Hit Count is tracked per individual breakpoint, not globally.",
-        explanation: "A Hit Count of 5 means: silently skip the first 4 executions, pause on exactly the 5th execution, then stop tracking. It fires once at the Nth hit — useful for catching bugs that only appear after several iterations."
-      }
-    ]
-  },
-  {
     id: "uiadav1-practice-exam",
     icon: "✓",
     title: "UI-ADAv1 Practice Exam",
-    subtitle: "153 Interactive Certification Questions",
+    subtitle: `${uiadav1Quiz.length} Certification Practice Questions`,
     color: "#F59E0B",
     quizLabel: "UI-ADAV1 PRACTICE EXAM",
     sections: [
       {
         heading: "About This Practice Exam",
-        content: `This practice exam was imported from the supplied <strong>UI-ADAv1 question-and-answer PDF</strong>. It contains <strong>153 complete multiple-choice questions</strong>, with the source question number retained on every card.<br/><br/>
-Use the <strong>Exam Questions</strong> tab to select an answer, check it immediately, and review the supplied explanation. When the source only provided an answer key, the feedback identifies the keyed answer without inventing an explanation.<br/><br/>
-<strong>Import note:</strong> Source questions 2, 20, 82, 134, 147, and 155 depend on missing visual or drag-and-drop content and are not included in the interactive set. The source PDF also contains two different questions numbered 151; both are included.`
+        content: `This practice exam contains <strong>${uiadav1Quiz.length} questions</strong> from the supplied <a href="${import.meta.env.BASE_URL}uipath.pdf" target="_blank" rel="noreferrer">UiPath PDF</a>, including its answers, explanations, and exhibits.<br/><br/>
+Select an answer for immediate feedback. For questions with multiple correct answers, select all your choices and click <strong>Check answers</strong>. For hotspot and drag-and-drop questions, work out your response, then click <strong>Reveal answer</strong> to review the supplied solution. Review questions do not count toward your score.<br/><br/>
+Answers and explanations follow the supplied PDF. Each question links to its source page.`
       }
     ],
     quiz: uiadav1Quiz
@@ -822,7 +146,7 @@ const QuizSection = memo(function QuizSection({
   const [submitted, setSubmitted] = useState({});
   const [savedQuestions, setSavedQuestions] = useState(() => {
     try {
-      const saved = JSON.parse(localStorage.getItem(`uipath-saved-questions-${topicId}`) || "[]");
+      const saved = JSON.parse(localStorage.getItem(`uipath-saved-questions-${topicId}-pdf377-v1`) || "[]");
       return Array.isArray(saved) ? saved.filter(index => Number.isInteger(index) && index >= 0 && index < questions.length) : [];
     } catch {
       return [];
@@ -836,7 +160,7 @@ const QuizSection = memo(function QuizSection({
       ? savedQuestions.filter(index => index !== qi)
       : [...savedQuestions, qi];
     try {
-      localStorage.setItem(`uipath-saved-questions-${topicId}`, JSON.stringify(nextSaved));
+      localStorage.setItem(`uipath-saved-questions-${topicId}-pdf377-v1`, JSON.stringify(nextSaved));
       setSavedQuestions(nextSaved);
       setSaveError("");
     } catch {
@@ -844,18 +168,34 @@ const QuizSection = memo(function QuizSection({
     }
   };
 
-  const handleSelect = (qi, oi) => {
+  const submitQuestion = (qi) => {
     if (submitted[qi]) return;
     onQuestionFocus?.(qi);
-    setAnswers(prev => ({ ...prev, [qi]: oi }));
     const nextSubmitted = { ...submitted, [qi]: true };
     const nextQuestion = questions.findIndex((_, index) => !nextSubmitted[index]);
     setSubmitted(nextSubmitted);
     onQuestionSubmit?.(qi, nextQuestion);
   };
 
-  const totalSubmitted = Object.keys(submitted).length;
-  const totalCorrect = Object.keys(submitted).filter(qi => answers[qi] === questions[qi].answer).length;
+  const handleSelect = (qi, oi) => {
+    if (submitted[qi]) return;
+    onQuestionFocus?.(qi);
+    if (questions[qi].type === "multiple") {
+      setAnswers(prev => {
+        const selected = prev[qi] || [];
+        return { ...prev, [qi]: selected.includes(oi) ? selected.filter(index => index !== oi) : [...selected, oi] };
+      });
+    } else {
+      setAnswers(prev => ({ ...prev, [qi]: oi }));
+      submitQuestion(qi);
+    }
+  };
+  const isAnswerCorrect = (qi) => questions[qi].type === "multiple"
+    ? answers[qi]?.length === questions[qi].answers.length && questions[qi].answers.every(index => answers[qi].includes(index))
+    : answers[qi] === questions[qi].answer;
+  const graded = Object.keys(submitted).filter(qi => questions[qi].type !== "review");
+  const totalSubmitted = graded.length;
+  const totalCorrect = graded.filter(isAnswerCorrect).length;
 
   return (
     <div>
@@ -899,12 +239,13 @@ const QuizSection = memo(function QuizSection({
         if (showSavedOnly && !savedQuestions.includes(qi)) return null;
         const isSubmitted = !!submitted[qi];
         const selected = answers[qi];
-        const isCorrect = selected === q.answer;
+        const isCorrect = isAnswerCorrect(qi);
+        const isReview = q.type === "review";
 
         return (
           <div key={qi} style={{
             marginBottom: 16,
-            border: `1px solid ${isSubmitted ? (isCorrect ? "#34D39940" : "#F8717140") : "var(--border-primary)"}`,
+            border: `1px solid ${isSubmitted ? (isReview ? `${color}40` : isCorrect ? "#34D39940" : "#F8717140") : "var(--border-primary)"}`,
             borderRadius: 10,
             overflow: "hidden",
             background: "var(--bg-root)"
@@ -932,30 +273,39 @@ const QuizSection = memo(function QuizSection({
               <div style={{ fontSize: 13, color: "var(--text-primary)", lineHeight: 1.6, fontWeight: 600 }}>
                 {q.q}
               </div>
+              <a href={`${import.meta.env.BASE_URL}uipath.pdf#page=${q.sourcePage}`} target="_blank" rel="noreferrer" style={{ color, fontSize: 12 }}>View source PDF ? page {q.sourcePage}</a>
+              {q.exhibits?.map(src => (
+                <a key={src} href={import.meta.env.BASE_URL + src} target="_blank" rel="noreferrer" aria-label={`Enlarge exhibit for question ${q.sourceNumber}`}>
+                  <img src={import.meta.env.BASE_URL + src} alt={`Source exhibit for question ${q.sourceNumber}`} loading="lazy" style={{ display: "block", maxWidth: "100%", height: "auto", marginTop: 12, background: "white" }} />
+                </a>
+              ))}
             </div>
 
             <div style={{ padding: "12px 14px" }}>
+              {q.type === "multiple" && <p style={{ color, fontSize: 12 }}>Select {q.answers.length} answers, then check your choices.</p>}
               {q.options.map((opt, oi) => {
+                const optionCorrect = q.answers.includes(oi);
+                const optionSelected = Array.isArray(selected) ? selected.includes(oi) : selected === oi;
                 let bg = "var(--bg-option)";
                 let borderColor = "var(--border-primary)";
                 let textColor = "var(--text-secondary)";
 
                 if (isSubmitted) {
-                  if (oi === q.answer) {
+                  if (optionCorrect) {
                     bg = "#052e16"; borderColor = "#34D399"; textColor = "#86EFAC";
-                  } else if (oi === selected && !isCorrect) {
+                  } else if (optionSelected && !isCorrect) {
                     bg = "#2d0a0a"; borderColor = "#F87171"; textColor = "#FCA5A5";
                   }
-                } else if (selected === oi) {
+                } else if (optionSelected) {
                   bg = `${color}15`; borderColor = color; textColor = "#fff";
                 }
 
-                const circleColor = isSubmitted && oi === q.answer ? "#34D399"
-                  : isSubmitted && oi === selected && !isCorrect ? "#F87171"
-                  : selected === oi && !isSubmitted ? color
+                const circleColor = isSubmitted && optionCorrect ? "#34D399"
+                  : isSubmitted && optionSelected && !isCorrect ? "#F87171"
+                  : optionSelected && !isSubmitted ? color
                   : "transparent";
-                const circleText = isSubmitted && (oi === q.answer || (oi === selected && !isCorrect)) ? "#000"
-                  : selected === oi && !isSubmitted ? "#000"
+                const circleText = isSubmitted && (optionCorrect || (optionSelected && !isCorrect)) ? "#000"
+                  : optionSelected && !isSubmitted ? "#000"
                   : textColor;
 
                 return (
@@ -964,6 +314,7 @@ const QuizSection = memo(function QuizSection({
                     key={oi}
                     onClick={() => handleSelect(qi, oi)}
                     disabled={isSubmitted}
+                    aria-pressed={optionSelected}
                     style={{
                       width: "100%",
                       padding: "9px 12px",
@@ -999,21 +350,28 @@ const QuizSection = memo(function QuizSection({
                 );
               })}
 
+              {!isSubmitted && (q.type === "multiple" || isReview) && (
+                <button type="button" onClick={() => submitQuestion(qi)} disabled={!isReview && !selected?.length}
+                  style={{ padding: "10px 16px", margin: "8px 0", borderRadius: 7, border: `1px solid ${color}`, background: "var(--bg-option)", color, cursor: "pointer", fontFamily: "inherit" }}>
+                  {isReview ? "Reveal answer" : "Check answers"}
+                </button>
+              )}
               {isSubmitted && (
                 <div style={{
                   marginTop: 10,
                   padding: "12px 14px",
-                  background: isCorrect ? "#052e1660" : "#2d0a0a60",
+                  background: isReview ? "var(--bg-option)" : isCorrect ? "#052e1660" : "#2d0a0a60",
                   border: `1px solid ${isCorrect ? "#34D39930" : "#F8717130"}`,
                   borderRadius: 8
                 }}>
                   <div style={{
                     fontSize: 11, fontWeight: 800, letterSpacing: 1,
-                    color: isCorrect ? "#34D399" : "#F87171",
+                    color: isReview ? color : isCorrect ? "#34D399" : "#F87171",
                     marginBottom: 8
                   }}>
-                    {isCorrect ? "✓ CORRECT" : "✗ INCORRECT — Correct answer: " + String.fromCharCode(65 + q.answer)}
+                    {isReview ? "SOURCE ANSWER - REVIEW" : isCorrect ? "CORRECT" : "INCORRECT - Correct answer: " + q.answerText}
                   </div>
+                  {isReview && <div style={{ whiteSpace: "pre-line", color: "var(--text-primary)", fontSize: 13, lineHeight: 1.7, marginBottom: 12 }}>{q.answerText}</div>}
                   {q.trap && (
                     <div style={{ fontSize: 11, color: "#FBBF24", marginBottom: 8, lineHeight: 1.7 }}>
                       <strong style={{ color: "#FCD34D" }}>TRAP: </strong>{q.trap}
@@ -1053,7 +411,7 @@ export default function UiPathCourse() {
     localStorage.setItem("uipath-theme", isDark ? "dark" : "light");
   }, [isDark]);
 
-  const [active, setActive] = useState("else-if");
+  const [active, setActive] = useState(TIMED_EXAM_ID);
   const [openSections, setOpenSections] = useState({});
   const [activeTab, setActiveTab] = useState("content");
   const [sidebarOpen, setSidebarOpen] = useState(window.innerWidth >= 768);
